@@ -37,6 +37,8 @@ import Silk from './Silk';
 import ScrollVelocity from './ScrollVelocity';
 import MagnetLines from './MagnetLines';
 import { supabase } from './supabaseClient';
+import { PRICE_IDS } from './stripeConfig';
+import { supabase } from './supabaseClient';
 
 function Navbar({ currentPage, setPage, user, setUser }) {
   return (
@@ -274,9 +276,34 @@ function PricingPage({ setPage }) {
                   </li>
                 ))}
               </ul>
-              <button className={`btn-plan ${plan.popular ? "btn-primary" : "btn-outline"}`} onClick={() => setPage("signup")}>
-                Get Started
-              </button>
+              <button
+  className={`btn-plan ${plan.popular ? "btn-primary" : "btn-outline"}`}
+  onClick={async () => {
+    // Check if user is logged in
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setPage("signup");
+      return;
+    }
+
+    // Create checkout session
+    const priceId = plan.name.toLowerCase() === 'starter' ? PRICE_IDS.starter : PRICE_IDS.unlimited;
+    const response = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        priceId,
+        userId: user.id,
+        userEmail: user.email,
+      }),
+    });
+
+    const { url } = await response.json();
+    window.location.href = url;
+  }}
+>
+  Subscribe Now
+</button>
             </div>
           ))}
         </div>
