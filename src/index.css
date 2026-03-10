@@ -520,6 +520,146 @@ background: linear-gradient(135deg, #ffffff 20%, #ff6b9d 30%, #b388ff 55%, #4a90
 }
 
 /* ═══════════════════════════════════════════
+   EXAMPLES PAGE
+   ═══════════════════════════════════════════ */
+.examples-page {
+  padding-top: 70px;
+}
+
+.examples-hero {
+  padding: 5rem 2rem 2rem;
+  text-align: center;
+}
+
+.examples-feed {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 2rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.example-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: var(--transition);
+  animation: fadeUp 0.6s ease-out both;
+}
+
+.example-card:hover {
+  background: var(--glass-hover);
+  border-color: var(--glass-border-hover);
+  transform: translateY(-4px);
+}
+
+.example-card.accent-peach:hover  { border-color: rgba(255, 107, 157, 0.3); box-shadow: 0 8px 40px rgba(255, 107, 157, 0.1); }
+.example-card.accent-purple:hover { border-color: rgba(179, 136, 255, 0.3); box-shadow: 0 8px 40px rgba(179, 136, 255, 0.1); }
+.example-card.accent-blue:hover   { border-color: rgba(126, 200, 227, 0.3); box-shadow: 0 8px 40px rgba(126, 200, 227, 0.1); }
+
+.example-image-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+}
+
+.example-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.5s ease;
+}
+
+.example-card:hover .example-image {
+  transform: scale(1.03);
+}
+
+.example-platform-badge {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 50px;
+  padding: 0.4rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.example-content {
+  padding: 2rem;
+}
+
+.example-agent {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 1rem;
+  letter-spacing: 0.5px;
+}
+
+.accent-peach .example-agent  { color: #ff6b9d; }
+.accent-purple .example-agent { color: var(--purple); }
+.accent-blue .example-agent   { color: var(--slblue); }
+
+.example-caption {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-line;
+  margin-bottom: 1.5rem;
+}
+
+.example-result {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 50px;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.result-icon {
+  font-size: 1rem;
+}
+
+.result-text {
+  background: linear-gradient(135deg, #ff6b9d, var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@media (max-width: 768px) {
+  .examples-feed {
+    padding: 1.5rem;
+    gap: 2rem;
+  }
+
+  .example-content {
+    padding: 1.5rem;
+  }
+
+  .example-image-wrap {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+/* ═══════════════════════════════════════════
    PRICING PAGE
    ═══════════════════════════════════════════ */
 .pricing-grid {
