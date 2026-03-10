@@ -205,7 +205,7 @@ function HomePage({ setPage, user }) {
 // ════════════════════════════════════════════
 //  PRICING PAGE
 // ════════════════════════════════════════════
-function PricingPage({ setPage }) {
+function PricingPage({ setPage, user }) {
   /*
    * EDIT: Change the pricing plans below.
    * Each plan has:
@@ -278,9 +278,7 @@ function PricingPage({ setPage }) {
               </ul>
               <button
   className={`btn-plan ${plan.popular ? "btn-primary" : "btn-outline"}`}
-  onClick={async () => {
-    // Check if user is logged in
-    const { data: { user } } = await supabase.auth.getUser();
+  onClick={async () => {//c
     if (!user) {
       setPage("signup");
       return;
@@ -803,7 +801,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case "home":    return <HomePage setPage={changePage} user={user} />;
-      case "pricing": return <PricingPage setPage={changePage} />;
+      case "pricing": return <PricingPage setPage={changePage} user={user} />;
       case "examples": return <ExamplesPage setPage={changePage} />;
       case "contact": return <ContactPage />;
       case "account": return <AccountPage user={user} setPage={changePage} />;
