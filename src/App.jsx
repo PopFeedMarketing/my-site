@@ -1,5 +1,4 @@
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
 /*
  * ============================================
  *  POPFEED MARKETING — MAIN APP
@@ -36,7 +35,6 @@ import { useState } from "react";
 import Silk from './Silk';
 import ScrollVelocity from './ScrollVelocity';
 import MagnetLines from './MagnetLines';
-import { supabase } from './supabaseClient';
 import { PRICE_IDS } from './stripeConfig';
 import { supabase } from './supabaseClient';
 
@@ -793,6 +791,26 @@ function Footer({ setPage }) {
 export default function App() {
   const [page, setPage] = useState("home");
   const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            setUser({
+              name: profile?.name || session.user.email.split("@")[0],
+              email: session.user.email,
+              id: session.user.id,
+              subscription: profile?.subscription || 'free',
+            });
+          });
+      }
+    });
+  }, []);
 
   // Scroll to top when changing pages
   const changePage = (newPage) => {
