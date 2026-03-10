@@ -193,7 +193,7 @@ function HomePage({ setPage, user }) {
         <div className="glass-card cta-card">
           <h2 className="cta-title">Ready to Put Your Social Media on Autopilot?</h2>
           <p className="cta-text">Join hundreds of brands already saving hours every week with PopFeed.</p>
-          <button className="btn-primary btn-large" onClick={() => setPage("signup")}>Start Your Journey</button>
+          <button className="btn-primary btn-large" onClick={() => setPage(user ? "account" : "signup")}>Start Your Journey</button>
         </div>
       </section>
     </div>
