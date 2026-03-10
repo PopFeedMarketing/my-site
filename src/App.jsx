@@ -284,6 +284,8 @@ function PricingPage({ setPage, user }) {
       return;
     }
 
+console.log("User:", user);
+
     // Create checkout session
     const priceId = plan.name.toLowerCase() === 'starter' ? PRICE_IDS.starter : PRICE_IDS.unlimited;
     const response = await fetch('/api/create-checkout', {
