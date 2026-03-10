@@ -1012,6 +1012,67 @@ background: linear-gradient(135deg, #ffffff 20%, #ff6b9d 30%, #b388ff 55%, #4a90
 }
 
 /* ═══════════════════════════════════════════
+   ACCOUNT PAGE
+   ═══════════════════════════════════════════ */
+.account-card {
+  width: 100%;
+  max-width: 450px;
+  padding: 2.5rem;
+  text-align: center;
+}
+
+.account-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6b9d, var(--purple));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #0a0a0a;
+  margin: 0 auto 1rem;
+}
+
+.account-plan {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.03);
+  text-align: left;
+}
+
+.plan-badge {
+  display: inline-block;
+  padding: 0.3rem 1rem;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1rem;
+}
+
+.account-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.account-feature {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+
+/* ═══════════════════════════════════════════
    RESPONSIVE
    ═══════════════════════════════════════════ */
 @media (max-width: 768px) {

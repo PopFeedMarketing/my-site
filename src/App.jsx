@@ -36,6 +36,7 @@ import { useState } from "react";
 import Silk from './Silk';
 import ScrollVelocity from './ScrollVelocity';
 import MagnetLines from './MagnetLines';
+import { supabase } from './supabaseClient';
 
 function Navbar({ currentPage, setPage, user, setUser }) {
   return (
@@ -53,8 +54,8 @@ function Navbar({ currentPage, setPage, user, setUser }) {
         <div className="nav-auth">
           {user ? (
             <div className="user-menu">
-              <span className="user-greeting">Hi, {user.name}</span>
-              <button className="btn-ghost" onClick={() => setUser(null)}>Log Out</button>
+              <button className="btn-ghost" onClick={() => setPage("account")}>Hi, {user.name}</button>
+	      <button className="btn-ghost" onClick={() => { supabase.auth.signOut(); setUser(null); setPage("home"); }}>Log Out</button>
             </div>
           ) : (
             <>
@@ -71,7 +72,7 @@ function Navbar({ currentPage, setPage, user, setUser }) {
 // ════════════════════════════════════════════
 //  HOME / LANDING PAGE
 // ════════════════════════════════════════════
-function HomePage({ setPage }) {
+function HomePage({ setPage, user }) {
   /*
    * EDIT: Change the hero section text below.
    * - heroTitle: The big headline
@@ -157,7 +158,7 @@ function HomePage({ setPage }) {
   <h1 className="hero-title">{heroTitle}</h1>
           <p className="hero-subtitle">{heroSubtitle}</p>
           <div className="hero-buttons">
-            <button className="btn-primary" onClick={() => setPage("signup")}>Get Started</button>
+            <button className="btn-primary" onClick={() => setPage(user ? "account" : "signup")}>Subscribe Now</button>
             <button className="btn-outline" onClick={() => setPage("pricing")}>View Pricing</button>
           </div>
         </div>
@@ -215,42 +216,40 @@ function PricingPage({ setPage }) {
    *   - popular: true/false (highlights the card)
    */
   const plans = [
-   
-    {
-      name: "Starter",
-      price: "$49",
-      period: "/month",
-      description: "For beginners to growing brands",
-      features: [
-        "3 Social Accounts",
-        "50 PopCredits",
-        "Smart scheduling",
-	"Workflow automation",
-        "Multi-platform sync",
-        "Audience targeting",
-        "Priority support",
-      ],
-      color: "purple",
-      popular: true,
-    },
-    {
-      name: "Unlimited",
-      price: "$79",
-      period: "/month",
-      description: "For users managing multiple client brands",
-      features: [
-        "Unlimited social accounts",
-        "Unlimited PopCredits",
-        "Client reporting",
-        "Dedicated account manager",
-	"Advanced analytics dashboard",
-	"Everything included in the Starter tier"
-     
-      ],
-      color: "blue",
-      popular: false,
-    },
-  ];
+  {
+    name: "Starter",
+    price: "$49",
+    period: "/month",
+    description: "For beginners to growing brands.",
+    features: [
+      "3 Social Accounts",
+      "50 PopCredits",
+      "Smart scheduling",
+      "Workflow automation",
+      "Multi-platform sync",
+      "Audience targeting",
+      "Priority support",
+    ],
+    color: "purple",
+    popular: false,
+  },
+  {
+    name: "Unlimited",
+    price: "$79",
+    period: "/month",
+    description: "For users managing multiple client brands.",
+    features: [
+      "Unlimited social accounts",
+      "Unlimited PopCredits",
+      "Client reporting",
+      "Dedicated account manager",
+      "Advanced analytics dashboard",
+      "Everything included in Starter",
+    ],
+    color: "blue",
+    popular: true,
+  },
+];
 
   return (
     <div className="page pricing-page">
@@ -383,17 +382,38 @@ function LoginPage({ setPage, setUser }) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    // EDIT: Replace with real authentication (Firebase, Supabase, your own backend, etc.)
-    // This is a placeholder that accepts any input
-    if (form.email && form.password) {
-      setUser({ name: form.email.split("@")[0], email: form.email });
-      setPage("home");
-    } else {
-      setError("Please fill in all fields.");
-    }
-  };
+  const handleLogin = async (e) => {
+  e.preventDefault();
+  if (!form.email || !form.password) {
+    setError("Please fill in all fields.");
+    return;
+  }
+
+  const { data, error: loginError } = await supabase.auth.signInWithPassword({
+    email: form.email,
+    password: form.password,
+  });
+
+  if (loginError) {
+    setError(loginError.message);
+    return;
+  }
+
+  // Fetch their profile
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', data.user.id)
+    .single();
+
+  setUser({
+    name: profile?.name || form.email.split("@")[0],
+    email: form.email,
+    id: data.user.id,
+    subscription: profile?.subscription || 'free',
+  });
+  setPage("home");
+};
 
   return (
     <div className="page auth-page">
@@ -449,24 +469,37 @@ function SignupPage({ setPage, setUser }) {
   const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [error, setError] = useState("");
 
-  const handleSignup = (e) => {
-    e.preventDefault();
-    // EDIT: Replace with real authentication (Firebase, Supabase, your own backend, etc.)
-    if (!form.name || !form.email || !form.password) {
-      setError("Please fill in all fields.");
-      return;
+  const handleSignup = async (e) => {
+  e.preventDefault();
+  if (!form.name || !form.email || !form.password) {
+    setError("Please fill in all fields.");
+    return;
+  }
+  if (form.password !== form.confirm) {
+    setError("Passwords don't match.");
+    return;
+  }
+  if (form.password.length < 6) {
+    setError("Password must be at least 6 characters.");
+    return;
+  }
+
+  const { data, error: signUpError } = await supabase.auth.signUp({
+    email: form.email,
+    password: form.password,
+    options: {
+      data: { name: form.name }
     }
-    if (form.password !== form.confirm) {
-      setError("Passwords don't match.");
-      return;
-    }
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
-    setUser({ name: form.name, email: form.email });
-    setPage("home");
-  };
+  });
+
+  if (signUpError) {
+    setError(signUpError.message);
+    return;
+  }
+
+  setUser({ name: form.name, email: form.email, id: data.user.id });
+  setPage("home");
+};
 
   return (
     <div className="page auth-page">
@@ -645,13 +678,56 @@ function ExamplesPage({ setPage }) {
       <section className="cta-section">
         <div className="glass-card cta-card">
           <h2 className="cta-title">Want Results Like These?</h2>
-          <p className="cta-text">Start your free trial and let PopFeed create scroll-stopping content for your listings — automatically.</p>
+          <p className="cta-text">Subscribe Now and let PopFeed create scroll-stopping content for your listings — automatically.</p>
           <div className="hero-buttons">
-            <button className="btn-primary btn-large" onClick={() => setPage("signup")}>Start Free Trial</button>
+            <button className="btn-primary btn-large" onClick={() => setPage(user ? "account" : "signup")}>Subscribe Now</button>
             <button className="btn-outline btn-large" onClick={() => setPage("pricing")}>See Pricing</button>
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════
+//  ACCOUNT PAGE
+// ════════════════════════════════════════════
+function AccountPage({ user, setPage }) {
+  const subscriptionDetails = {
+  free:      { label: "No Plan",     color: "#888",    features: ["No active subscription", "Choose a plan to get started"] },
+  starter:   { label: "Starter",     color: "#b388ff", features: ["3 Social Accounts", "50 PopCredits", "Smart scheduling", "Workflow automation", "Multi-platform sync", "Audience targeting", "Priority support"] },
+  unlimited: { label: "Unlimited",   color: "#7ec8e3", features: ["Unlimited social accounts", "Unlimited PopCredits", "Client reporting", "Dedicated account manager", "Advanced analytics dashboard", "Everything included in Starter"] },
+};
+
+  const plan = subscriptionDetails[user?.subscription] || subscriptionDetails.free;
+
+  return (
+    <div className="page auth-page">
+      <div className="glass-card account-card">
+        <div className="account-avatar">
+          {user?.name?.charAt(0)?.toUpperCase() || "?"}
+        </div>
+        <h2 className="auth-title">{user?.name}</h2>
+        <p className="auth-subtitle">{user?.email}</p>
+
+        <div className="account-plan" style={{ borderColor: plan.color }}>
+          <div className="plan-badge" style={{ background: plan.color, color: '#0a0a0a' }}>
+            {plan.label}
+          </div>
+          <ul className="account-features">
+            {plan.features.map((f, i) => (
+              <li key={i} className="account-feature">
+                <span style={{ color: plan.color }}>✓</span> {f}
+              </li>
+            ))}
+          </ul>
+          {(!user?.subscription || user?.subscription === 'free') && (
+            <button className="btn-primary btn-full" style={{ marginTop: '1rem' }} onClick={() => setPage("pricing")}>
+  	Choose a Plan
+		</button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -699,10 +775,11 @@ export default function App() {
 
   const renderPage = () => {
     switch (page) {
-      case "home":    return <HomePage setPage={changePage} />;
+      case "home":    return <HomePage setPage={changePage} user={user} />;
       case "pricing": return <PricingPage setPage={changePage} />;
       case "examples": return <ExamplesPage setPage={changePage} />;
       case "contact": return <ContactPage />;
+      case "account": return <AccountPage user={user} setPage={changePage} />;
       case "login":   return <LoginPage setPage={changePage} setUser={setUser} />;
       case "signup":  return <SignupPage setPage={changePage} setUser={setUser} />;
       default:        return <HomePage setPage={changePage} />;
