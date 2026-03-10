@@ -47,6 +47,7 @@ function Navbar({ currentPage, setPage, user, setUser }) {
         <div className="nav-links">
           <button className={`nav-link ${currentPage === "home" ? "active" : ""}`} onClick={() => setPage("home")}>Home</button>
           <button className={`nav-link ${currentPage === "pricing" ? "active" : ""}`} onClick={() => setPage("pricing")}>Pricing</button>
+	  <button className={`nav-link ${currentPage === "examples" ? "active" : ""}`} onClick={() => setPage("examples")}>Examples</button>
           <button className={`nav-link ${currentPage === "contact" ? "active" : ""}`} onClick={() => setPage("contact")}>Contact</button>
         </div>
         <div className="nav-auth">
@@ -535,6 +536,127 @@ function SignupPage({ setPage, setUser }) {
 }
 
 // ════════════════════════════════════════════
+//  EXAMPLES PAGE
+// ════════════════════════════════════════════
+function ExamplesPage({ setPage }) {
+  /*
+   * EDIT: Add, remove, or change examples here.
+   * Each example has:
+   *   - platform: "instagram", "facebook", "tiktok", or "linkedin"
+   *   - image: URL to the post image (use /example1.jpg etc from your public folder)
+   *   - caption: the auto-generated caption text
+   *   - agent: the realtor's name
+   *   - result: a short stat or outcome
+   *   - color: "peach", "purple", or "blue"
+   */
+  const examples = [
+    {
+      platform: "Instagram",
+      image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&h=600&fit=crop",
+      caption: "✨ Just Listed in Westlake! This stunning 4-bed, 3-bath home features an open floor plan, chef's kitchen with quartz countertops, and a backyard oasis with a heated pool. Schedule your private showing today! 🏡\n\n#JustListed #DreamHome #RealEstate #WestlakeLiving #LuxuryHomes #OpenHouse",
+      agent: "Sarah Mitchell — Keller Williams",
+      result: "342 likes · 28 saves · 12 DMs in 24hrs",
+      color: "peach",
+    },
+    {
+      platform: "Facebook",
+      image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=600&fit=crop",
+      caption: "🏠 PRICE REDUCED — $450,000!\n\nThis beautifully renovated 3-bedroom ranch in Maple Ridge is now $25K below market value. New roof, updated HVAC, and a fully finished basement perfect for entertaining.\n\nDon't miss this one — homes in this neighborhood sell in under 7 days. Link in comments for the full virtual tour! 👇",
+      agent: "Marcus Johnson — RE/MAX Elite",
+      result: "89 shares · 2,400 reach · 6 buyer inquiries",
+      color: "purple",
+    },
+    {
+      platform: "Instagram",
+      image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600&h=600&fit=crop",
+      caption: "Modern living meets timeless design 🖤\n\nThis brand new construction in The Heights offers 2,800 sq ft of pure sophistication — floor-to-ceiling windows, waterfall island, smart home integration throughout.\n\nTap the link in bio to book a walkthrough before it's gone.\n\n#NewConstruction #ModernHome #TheHeights #RealEstateAgent #HomeBuyers",
+      agent: "Jessica Park — Compass",
+      result: "518 likes · 45 saves · 3 offers in 48hrs",
+      color: "blue",
+    },
+    {
+      platform: "TikTok",
+      image: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=600&h=600&fit=crop",
+      caption: "POV: You just listed a $1.2M lakefront property and PopFeed made the content for you in 30 seconds 🎬\n\nThis 5-bed beauty on Lake Austin has a private dock, infinity pool, and views that don't quit. Auto-posted to all platforms at peak engagement time.\n\n#RealTok #LuxuryRealEstate #RealtorLife #LakefrontLiving",
+      agent: "David Chen — Sotheby's International",
+      result: "12.4K views · 890 likes · 34 inquiries",
+      color: "peach",
+    },
+    {
+      platform: "LinkedIn",
+      image: "https://images.unsplash.com/photo-1600573472592-401b489a3cdc?w=600&h=600&fit=crop",
+      caption: "My team closed 14 deals last quarter — and I didn't write a single social media post manually.\n\nHere's the truth: most agents spend 5+ hours/week on content creation. We spend zero. PopFeed handles our listings, market updates, and engagement posts automatically.\n\nThis duplex in Riverside? Listed Monday, posted across 4 platforms by Tuesday morning, under contract by Friday.\n\nThe future of real estate marketing is automation.",
+      agent: "Rachel Torres — eXp Realty",
+      result: "1,200 impressions · 47 reactions · 8 connection requests",
+      color: "purple",
+    },
+    {
+      platform: "Instagram",
+      image: "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=600&h=600&fit=crop",
+      caption: "SOLD 🔑 in just 5 days!\n\nOur sellers couldn't be happier. This charming colonial in Oak Park was auto-listed across Instagram, Facebook, and Zillow simultaneously. 47 showing requests in the first weekend.\n\nThinking about selling? Let's talk about what PopFeed + the right pricing strategy can do for your home.\n\n#SoldByPopFeed #RealEstateSuccess #OakPark #SellerMarket #JustSold",
+      agent: "Kevin O'Brien — Coldwell Banker",
+      result: "623 likes · 52 saves · SOLD over asking",
+      color: "blue",
+    },
+  ];
+
+  const platformIcons = {
+    Instagram: "📸",
+    Facebook: "📘",
+    TikTok: "🎵",
+    LinkedIn: "💼",
+  };
+
+  return (
+    <div className="page examples-page">
+      {/* ── Hero ── */}
+      <section className="examples-hero">
+        <h1 className="page-title">See PopFeed in Action</h1>
+        <p className="section-subtitle">
+          Real listings. Real captions. Real results. Every post below was auto-generated 
+          by PopFeed — zero manual effort from the agent.
+        </p>
+      </section>
+
+      {/* ── Examples Feed ── */}
+      <section className="examples-feed">
+        {examples.map((ex, i) => (
+          <div key={i} className={`example-card accent-${ex.color}`}>
+            <div className="example-image-wrap">
+              <img src={ex.image} alt={`Example ${i + 1}`} className="example-image" />
+              <div className="example-platform-badge">
+                <span>{platformIcons[ex.platform]}</span>
+                <span>{ex.platform}</span>
+              </div>
+            </div>
+            <div className="example-content">
+              <div className="example-agent">{ex.agent}</div>
+              <p className="example-caption">{ex.caption}</p>
+              <div className="example-result">
+                <span className="result-icon">📈</span>
+                <span className="result-text">{ex.result}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* ── Bottom CTA ── */}
+      <section className="cta-section">
+        <div className="glass-card cta-card">
+          <h2 className="cta-title">Want Results Like These?</h2>
+          <p className="cta-text">Start your free trial and let PopFeed create scroll-stopping content for your listings — automatically.</p>
+          <div className="hero-buttons">
+            <button className="btn-primary btn-large" onClick={() => setPage("signup")}>Start Free Trial</button>
+            <button className="btn-outline btn-large" onClick={() => setPage("pricing")}>See Pricing</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════
 //  FOOTER
 // ════════════════════════════════════════════
 function Footer({ setPage }) {
@@ -550,6 +672,7 @@ function Footer({ setPage }) {
         <div className="footer-links">
           <button className="footer-link" onClick={() => setPage("home")}>Home</button>
           <button className="footer-link" onClick={() => setPage("pricing")}>Pricing</button>
+	  <button className="footer-link" onClick={() => setPage("examples")}>Examples</button>
           <button className="footer-link" onClick={() => setPage("contact")}>Contact</button>
         </div>
         <div className="footer-copy">
@@ -578,6 +701,7 @@ export default function App() {
     switch (page) {
       case "home":    return <HomePage setPage={changePage} />;
       case "pricing": return <PricingPage setPage={changePage} />;
+      case "examples": return <ExamplesPage setPage={changePage} />;
       case "contact": return <ContactPage />;
       case "login":   return <LoginPage setPage={changePage} setUser={setUser} />;
       case "signup":  return <SignupPage setPage={changePage} setUser={setUser} />;
