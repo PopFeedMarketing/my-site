@@ -287,17 +287,19 @@ console.log("User:", user);
     // Create checkout session
     const priceId = plan.name.toLowerCase() === 'starter' ? PRICE_IDS.starter : PRICE_IDS.unlimited;
     const response = await fetch('/api/create-checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        priceId,
-        userId: user.id,
-        userEmail: user.email,
-      }),
-    });
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    priceId,
+    userId: user.id,
+    userEmail: user.email,
+  }),
+});
 
-    const { url } = await response.json();
-    window.location.href = url;
+console.log("Response status:", response.status);
+const data = await response.json();
+console.log("Response data:", data);
+if (data.url) window.location.href = data.url;
   }}
 >
   Subscribe Now
