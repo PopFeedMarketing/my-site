@@ -792,25 +792,25 @@ export default function App() {
   const [page, setPage] = useState("home");
   const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data: profile }) => {
-            setUser({
-              name: profile?.name || session.user.email.split("@")[0],
-              email: session.user.email,
-              id: session.user.id,
-              subscription: profile?.subscription || 'free',
-            });
+ useEffect(() => {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session?.user) {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+        .then(({ data: profile }) => {
+          setUser({
+            name: profile?.name || session.user.email.split("@")[0],
+            email: session.user.email,
+            id: session.user.id,
+            subscription: profile?.subscription || 'free',
           });
-      }
-    });
-  }, []);
+        });
+    }
+  });
+}, []);
 
   // Scroll to top when changing pages
   const changePage = (newPage) => {
