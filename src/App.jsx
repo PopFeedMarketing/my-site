@@ -37,6 +37,8 @@ import ScrollVelocity from './ScrollVelocity';
 import MagnetLines from './MagnetLines';
 import { PRICE_IDS } from './stripeConfig';
 import { supabase } from './supabaseClient';
+import Dashboard from './Dashboard';
+import './Dashboard.css';
 
 function Navbar({ currentPage, setPage, user, setUser }) {
   return (
@@ -53,11 +55,12 @@ function Navbar({ currentPage, setPage, user, setUser }) {
         </div>
         <div className="nav-auth">
           {user ? (
-            <div className="user-menu">
-              <button className="btn-ghost" onClick={() => setPage("account")}>Hi, {user.name}</button>
-	      <button className="btn-ghost" onClick={() => { supabase.auth.signOut(); setUser(null); setPage("home"); }}>Log Out</button>
-            </div>
-          ) : (
+  <div className="user-menu">
+    <button className="btn-ghost" onClick={() => setPage("dashboard")}>Dashboard</button>
+    <button className="btn-ghost" onClick={() => setPage("account")}>Hi, {user.name}</button>
+    <button className="btn-ghost" onClick={() => { supabase.auth.signOut(); setUser(null); setPage("home"); }}>Log Out</button>
+  </div>
+) : (
             <>
               <button className="btn-ghost" onClick={() => setPage("login")}>Log In</button>
               <button className="btn-accent" onClick={() => setPage("signup")}>Sign Up</button>
@@ -829,6 +832,7 @@ export default function App() {
       case "account": return <AccountPage user={user} setPage={changePage} />;
       case "login":   return <LoginPage setPage={changePage} setUser={setUser} />;
       case "signup":  return <SignupPage setPage={changePage} setUser={setUser} />;
+      case "dashboard": return <Dashboard user={user} setPage={changePage} />;
       default:        return <HomePage setPage={changePage} />;
     }
   };
