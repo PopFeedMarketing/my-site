@@ -229,7 +229,6 @@ function DashAccounts({ user }) {
     { id: "tiktok", name: "TikTok", icon: "🎵", color: "#00f2ea", connected: false, handle: "" },
     { id: "linkedin", name: "LinkedIn", icon: "💼", color: "#0A66C2", connected: false, handle: "" },
     { id: "x", name: "X (Twitter)", icon: "🐦", color: "#1DA1F2", connected: false, handle: "" },
-    { id: "youtube", name: "YouTube", icon: "▶️", color: "#FF0000", connected: false, handle: "" },
   ]);
 
   const handleConnect = (platformId) => {
