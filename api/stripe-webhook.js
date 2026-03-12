@@ -1,5 +1,7 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { createClient } = require('@supabase/supabase-js');
+import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -28,6 +30,7 @@ export default async function handler(req, res) {
   try {
     event = stripe.webhooks.constructEvent(buf, sig, process.env.STRIPE_WEBHOOK_SECRET);
   } catch (err) {
+    console.error('Webhook signature error:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -44,10 +47,15 @@ export default async function handler(req, res) {
     if (priceId === process.env.UNLIMITED_PRICE_ID) plan = 'unlimited';
 
     // Update their profile in Supabase
-    await supabase
+    const { error } = await supabase
       .from('profiles')
       .update({ subscription: plan })
       .eq('id', userId);
+
+    if (error) {
+      console.error('Supabase update error:', error.message);
+      return res.status(500).json({ error: 'Failed to update subscription' });
+    }
   }
 
   res.status(200).json({ received: true });
