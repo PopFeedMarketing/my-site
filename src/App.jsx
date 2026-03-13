@@ -134,37 +134,59 @@ function HomePage({ setPage, user }) {
    */
   const services = [
     {
-      icon: "⚡",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+          <path d="M20 3v4M22 5h-4M4 17v2M5 18H3"/>
+        </svg>
+      ),
       title: "AI Content Generation",
       description: "Automatically generate on-brand posts, captions, and hashtags tailored to each platform. Never stare at a blank screen again.",
       color: "peach",
     },
     {
-      icon: "📅",
-      title: "Smart Scheduling",
-      description: "Our AI analyzes your audience and posts at the perfect time for maximum engagement across all your channels.",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/>
+          <path d="M16 2v4M8 2v4M3 10h5"/>
+          <circle cx="18" cy="18" r="4"/>
+          <path d="M18 16v2l1 1"/>
+        </svg>
+      ),
+      title: "Custom Scheduling",
+      description: "Set your own posting schedule or let PopFeed suggest optimal times. Full control over when and how often you post.",
       color: "purple",
     },
     {
-      icon: "📊",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 3v18h18"/>
+          <path d="M7 16v-5M11 16V8M15 16v-3M19 16V5"/>
+        </svg>
+      ),
       title: "Analytics Dashboard",
       description: "Track performance, audience growth, and engagement trends in one clean dashboard. Know what's working and what's not.",
       color: "blue",
     },
     {
-      icon: "🔄",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 2v6h-6"/>
+          <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+          <path d="M3 22v-6h6"/>
+          <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+        </svg>
+      ),
       title: "Multi-Platform Sync",
       description: "Manage Instagram, TikTok, X, Facebook, and LinkedIn from a single hub. One post, every platform, automatically adapted.",
       color: "peach",
     },
     {
-      icon: "🎯",
-      title: "Audience Targeting",
-      description: "Reach the right people with AI-driven audience insights. We find your ideal followers so you can focus on creating.",
-      color: "purple",
-    },
-    {
-      icon: "🤖",
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      ),
       title: "Workflow Automation",
       description: "From lead capture to follow-up sequences, automate the repetitive tasks that eat up your day.",
       color: "blue",
@@ -223,7 +245,7 @@ function HomePage({ setPage, user }) {
         <div className="services-grid">
           {services.map((service, i) => (
             <div key={i} className={`glass-card service-card accent-${service.color}`} style={{ animationDelay: `${i * 0.1}s` }}>
-              <span className="service-icon">{service.icon}</span>
+              <div className="service-icon">{service.icon}</div>
               <h3 className="service-title">{service.title}</h3>
               <p className="service-desc">{service.description}</p>
             </div>
