@@ -41,33 +41,73 @@ import Dashboard from './Dashboard';
 import './Dashboard.css';
 
 function Navbar({ currentPage, setPage, user, setUser }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navigate = (page) => {
+    setPage(page);
+    setMobileMenuOpen(false);
+  };
+
   return (
     <nav className="navbar">
       <div className="nav-inner">
-        <div className="nav-logo" onClick={() => setPage("home")}>
-  <img src="/logo.png" alt="PopFeed" style={{ height: '100px', marginTop: '14px' }} />
-</div>
+        <div className="nav-logo" onClick={() => navigate("home")}>
+          <img src="/logo.png" alt="PopFeed" style={{ height: '100px', marginTop: '14px' }} />
+        </div>
         <div className="nav-links">
-          <button className={`nav-link ${currentPage === "home" ? "active" : ""}`} onClick={() => setPage("home")}>Home</button>
-          <button className={`nav-link ${currentPage === "pricing" ? "active" : ""}`} onClick={() => setPage("pricing")}>Pricing</button>
-	  <button className={`nav-link ${currentPage === "examples" ? "active" : ""}`} onClick={() => setPage("examples")}>Examples</button>
-          <button className={`nav-link ${currentPage === "contact" ? "active" : ""}`} onClick={() => setPage("contact")}>Contact</button>
+          <button className={`nav-link ${currentPage === "home" ? "active" : ""}`} onClick={() => navigate("home")}>Home</button>
+          <button className={`nav-link ${currentPage === "pricing" ? "active" : ""}`} onClick={() => navigate("pricing")}>Pricing</button>
+          <button className={`nav-link ${currentPage === "examples" ? "active" : ""}`} onClick={() => navigate("examples")}>Examples</button>
+          <button className={`nav-link ${currentPage === "contact" ? "active" : ""}`} onClick={() => navigate("contact")}>Contact</button>
         </div>
         <div className="nav-auth">
           {user ? (
-  <div className="user-menu">
-    <button className="btn-ghost" onClick={() => setPage("dashboard")}>Dashboard</button>
-    <button className="btn-ghost" onClick={() => setPage("account")}>Hi, {user.name}</button>
-    <button className="btn-ghost" onClick={() => { supabase.auth.signOut(); setUser(null); setPage("home"); }}>Log Out</button>
-  </div>
-) : (
+            <div className="user-menu">
+              <button className="btn-ghost" onClick={() => navigate("dashboard")}>Dashboard</button>
+              <button className="btn-ghost" onClick={() => navigate("account")}>Hi, {user.name}</button>
+              <button className="btn-ghost" onClick={() => { supabase.auth.signOut(); setUser(null); navigate("home"); }}>Log Out</button>
+            </div>
+          ) : (
             <>
-              <button className="btn-ghost" onClick={() => setPage("login")}>Log In</button>
-              <button className="btn-accent" onClick={() => setPage("signup")}>Sign Up</button>
+              <button className="btn-ghost" onClick={() => navigate("login")}>Log In</button>
+              <button className="btn-accent" onClick={() => navigate("signup")}>Sign Up</button>
             </>
           )}
         </div>
+        {/* Hamburger — mobile only */}
+        <button
+          className={`nav-hamburger ${mobileMenuOpen ? "open" : ""}`}
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </div>
+
+      {/* Mobile dropdown */}
+      {mobileMenuOpen && (
+        <div className="mobile-menu">
+          <button className={`mobile-nav-link ${currentPage === "home" ? "active" : ""}`} onClick={() => navigate("home")}>Home</button>
+          <button className={`mobile-nav-link ${currentPage === "pricing" ? "active" : ""}`} onClick={() => navigate("pricing")}>Pricing</button>
+          <button className={`mobile-nav-link ${currentPage === "examples" ? "active" : ""}`} onClick={() => navigate("examples")}>Examples</button>
+          <button className={`mobile-nav-link ${currentPage === "contact" ? "active" : ""}`} onClick={() => navigate("contact")}>Contact</button>
+          <div className="mobile-menu-divider"></div>
+          {user ? (
+            <>
+              <button className="mobile-nav-link" onClick={() => navigate("dashboard")}>Dashboard</button>
+              <button className="mobile-nav-link" onClick={() => navigate("account")}>Hi, {user.name}</button>
+              <button className="mobile-nav-link mobile-nav-logout" onClick={() => { supabase.auth.signOut(); setUser(null); navigate("home"); }}>Log Out</button>
+            </>
+          ) : (
+            <>
+              <button className="mobile-nav-link" onClick={() => navigate("login")}>Log In</button>
+              <button className="mobile-nav-link mobile-nav-accent" onClick={() => navigate("signup")}>Sign Up →</button>
+            </>
+          )}
+        </div>
+      )}
     </nav>
   );
 }
@@ -299,7 +339,6 @@ function PricingPage({ setPage, user }) {
 
 console.log("Response status:", response.status);
 const data = await response.json();
-console.log("Response data:", data);
 if (data.url) window.location.href = data.url;
   }}
 >
