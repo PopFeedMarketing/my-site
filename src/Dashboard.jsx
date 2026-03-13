@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 import {
   LineChart,
@@ -68,6 +68,8 @@ export default function Dashboard({ user, setPage }) {
         return <DashPosts user={user} />;
       case "settings":
         return <DashSettings user={user} />;
+      case "posting":
+        return <DashPosting user={user} setDashPage={setDashPage} />;
       default:
         return <DashOverview user={user} setDashPage={setDashPage} />;
     }
@@ -95,6 +97,13 @@ export default function Dashboard({ user, setPage }) {
             >
               <span className="dash-nav-icon">📊</span>
               Overview
+            </button>
+            <button
+              className={`dash-nav-btn dash-nav-btn-create ${dashPage === "posting" ? "active" : ""}`}
+              onClick={() => setDashPage("posting")}
+            >
+              <span className="dash-nav-icon">🚀</span>
+              Create Post
             </button>
             <button
               className={`dash-nav-btn ${dashPage === "accounts" ? "active" : ""}`}
@@ -834,6 +843,369 @@ function DashSettings({ user }) {
         <button className="btn-primary btn-large" onClick={handleSave}>
           {saved ? "✓ Settings Saved!" : "Save Settings"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════
+//  CREATE POST PAGE — Step-by-step posting flow
+// ════════════════════════════════════════════
+
+const COLOR_OPTIONS = [
+  { name: "Black",      hex: "#0a0a0a" },
+  { name: "White",      hex: "#ffffff" },
+  { name: "Gold",       hex: "#D4AF37" },
+  { name: "Navy",       hex: "#1B3A6B" },
+  { name: "Emerald",    hex: "#2ECC71" },
+  { name: "Blush Pink", hex: "#FFB3BA" },
+  { name: "Slate Gray", hex: "#708090" },
+  { name: "Burgundy",   hex: "#800020" },
+  { name: "Cream",      hex: "#FFFDD0" },
+  { name: "Charcoal",   hex: "#36454F" },
+];
+
+const STYLE_OPTIONS = [
+  { id: "luxury",  label: "Luxury",  desc: "Premium, high-end aesthetic",    accent: "#D4AF37" },
+  { id: "bold",    label: "Bold",    desc: "Strong, impactful visuals",       accent: "#ff6b9d" },
+  { id: "modern",  label: "Modern",  desc: "Clean lines, contemporary feel", accent: "#7ec8e3" },
+  { id: "minimal", label: "Minimal", desc: "Simple, elegant, uncluttered",   accent: "#e8e8e8" },
+  { id: "elegant", label: "Elegant", desc: "Refined, sophisticated look",    accent: "#b388ff" },
+];
+
+function DashPosting({ user, setDashPage }) {
+  const [heroImage, setHeroImage]         = useState(null);  // base64 data URL
+  const [heroPreview, setHeroPreview]     = useState(null);  // display URL
+  const [style, setStyle]                 = useState(null);
+  const [primaryColor, setPrimaryColor]   = useState(null);
+  const [secondaryColor, setSecondaryColor] = useState(null);
+  const [prompt, setPrompt]               = useState("");
+  const [dragOver, setDragOver]           = useState(false);
+  const [loading, setLoading]             = useState(false);
+  const [success, setSuccess]             = useState(false);
+  const [settings, setSettings]           = useState(null);
+  const fileInputRef = useRef(null);
+
+  // Derived step unlock logic
+  const step1Done = !!heroImage;
+  const step2Done = step1Done && !!style;
+  const step3Done = step2Done && !!primaryColor && !!secondaryColor;
+  const canPost   = step3Done; // Step 4 is optional
+
+  // Fetch agent settings from Supabase
+  useEffect(() => {
+    /*
+     * EDIT: Update the table name below to match your Supabase schema.
+     * This assumes a table called 'agent_settings' with a 'user_id' column.
+     */
+    const fetchSettings = async () => {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from("agent_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+      if (data) setSettings(data);
+    };
+    fetchSettings();
+  }, [user]);
+
+  const handleImageFile = (file) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setHeroImage(e.target.result);
+      setHeroPreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    handleImageFile(e.dataTransfer.files[0]);
+  };
+
+  const handleRemoveImage = () => {
+    setHeroImage(null);
+    setHeroPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    // Reset all downstream steps
+    setStyle(null);
+    setPrimaryColor(null);
+    setSecondaryColor(null);
+    setPrompt("");
+  };
+
+  const resetFlow = () => {
+    setSuccess(false);
+    setHeroImage(null);
+    setHeroPreview(null);
+    setStyle(null);
+    setPrimaryColor(null);
+    setSecondaryColor(null);
+    setPrompt("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleBeginPosting = async () => {
+    setLoading(true);
+    const payload = {
+      image:          heroImage,
+      style,
+      primaryColor:   primaryColor.name,
+      primaryHex:     primaryColor.hex,
+      secondaryColor: secondaryColor.name,
+      secondaryHex:   secondaryColor.hex,
+      prompt,
+      userId:         user.id,
+      userEmail:      user.email,
+      settings:       settings || {},
+    };
+
+    try {
+      /*
+       * EDIT: Replace the URL below with your actual n8n webhook URL.
+       * Example: "https://popfeed.app.n8n.cloud/webhook/begin-posting"
+       */
+      const response = await fetch("https://your-n8n.app.n8n.cloud/webhook/begin-posting", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) throw new Error("Webhook failed");
+      setSuccess(true);
+    } catch (err) {
+      console.error("Begin posting error:", err.message);
+      // EDIT: Add a toast/error message here for the user
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Success Screen ──
+  if (success) {
+    return (
+      <div className="dash-content">
+        <div className="posting-success">
+          <div className="posting-success-icon">🚀</div>
+          <h2 className="posting-success-title">Your post is being generated!</h2>
+          <p className="posting-success-desc">
+            Check the Posts tab shortly to review your content.
+          </p>
+          <div className="posting-success-actions">
+            <button className="btn-primary" onClick={resetFlow}>
+              Create Another Post
+            </button>
+            <button className="btn-outline" onClick={() => setDashPage("posts")}>
+              Go to Posts →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Main Flow ──
+  return (
+    <div className="dash-content">
+      <div className="dash-header">
+        <h1 className="dash-title">Create Post</h1>
+        <p className="dash-subtitle">
+          Complete each step to generate your next listing post.
+        </p>
+      </div>
+
+      <div className="posting-flow">
+
+        {/* ══ Step 1: Hero Image ══ */}
+        <div className="posting-step posting-step-visible">
+          <div className="posting-step-header">
+            <span className={`step-badge ${step1Done ? "done" : "active"}`}>
+              {step1Done ? "✓" : "1"}
+            </span>
+            <span className="step-title">Hero Image</span>
+            {step1Done && <span className="step-done-tag">✓ Uploaded</span>}
+          </div>
+
+          {!heroImage ? (
+            <div
+              className={`upload-zone ${dragOver ? "drag-over" : ""}`}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <span className="upload-zone-icon">🖼️</span>
+              <p className="upload-zone-title">Drop your hero image here</p>
+              <p className="upload-zone-sub">or click to browse · JPG, PNG, WEBP</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(e) => handleImageFile(e.target.files[0])}
+              />
+            </div>
+          ) : (
+            <div className="upload-preview-wrap">
+              <img src={heroPreview} alt="Hero" className="upload-preview-img" />
+              <button className="upload-remove-btn" onClick={handleRemoveImage}>
+                ✕ Remove / Replace
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ══ Step 2: Style ══ */}
+        {step1Done && (
+          <div className="posting-step posting-step-animate">
+            <div className="posting-step-header">
+              <span className={`step-badge ${step2Done ? "done" : "active"}`}>
+                {step2Done ? "✓" : "2"}
+              </span>
+              <span className="step-title">Visual Style</span>
+              {step2Done && (
+                <span className="step-done-tag">
+                  ✓ {style.charAt(0).toUpperCase() + style.slice(1)}
+                </span>
+              )}
+            </div>
+            <div className="style-grid">
+              {STYLE_OPTIONS.map((s) => (
+                <button
+                  key={s.id}
+                  className={`style-card ${style === s.id ? "selected" : ""}`}
+                  style={style === s.id
+                    ? { borderColor: s.accent, boxShadow: `0 0 24px ${s.accent}35` }
+                    : {}}
+                  onClick={() => setStyle(s.id)}
+                >
+                  <span className="style-accent-dot" style={{ background: s.accent }}></span>
+                  <span className="style-label">{s.label}</span>
+                  <span className="style-desc">{s.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ══ Step 3: Colors ══ */}
+        {step2Done && (
+          <div className="posting-step posting-step-animate">
+            <div className="posting-step-header">
+              <span className={`step-badge ${step3Done ? "done" : "active"}`}>
+                {step3Done ? "✓" : "3"}
+              </span>
+              <span className="step-title">Brand Colors</span>
+              {step3Done && (
+                <div className="step-color-chips">
+                  <span
+                    className="step-color-chip"
+                    style={{ background: primaryColor.hex }}
+                    title={primaryColor.name}
+                  ></span>
+                  <span
+                    className="step-color-chip"
+                    style={{ background: secondaryColor.hex }}
+                    title={secondaryColor.name}
+                  ></span>
+                </div>
+              )}
+            </div>
+            <div className="color-selectors">
+              {/* Primary */}
+              <div className="color-selector-group">
+                <label className="color-selector-label">Primary Color</label>
+                <div className="color-swatches">
+                  {COLOR_OPTIONS.map((c) => (
+                    <button
+                      key={c.name}
+                      className={`color-swatch ${primaryColor?.name === c.name ? "selected" : ""}`}
+                      style={{ background: c.hex }}
+                      title={c.name}
+                      onClick={() => setPrimaryColor(c)}
+                    >
+                      {primaryColor?.name === c.name && (
+                        <span className="swatch-check" style={{ color: c.hex === "#ffffff" || c.hex === "#FFFDD0" ? "#000" : "#fff" }}>✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {primaryColor && (
+                  <span className="color-selected-name">{primaryColor.name}</span>
+                )}
+              </div>
+              {/* Secondary */}
+              <div className="color-selector-group">
+                <label className="color-selector-label">Secondary Color</label>
+                <div className="color-swatches">
+                  {COLOR_OPTIONS.map((c) => (
+                    <button
+                      key={c.name}
+                      className={`color-swatch ${secondaryColor?.name === c.name ? "selected" : ""}`}
+                      style={{ background: c.hex }}
+                      title={c.name}
+                      onClick={() => setSecondaryColor(c)}
+                    >
+                      {secondaryColor?.name === c.name && (
+                        <span className="swatch-check" style={{ color: c.hex === "#ffffff" || c.hex === "#FFFDD0" ? "#000" : "#fff" }}>✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {secondaryColor && (
+                  <span className="color-selected-name">{secondaryColor.name}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ Step 4: Custom Prompt (optional) ══ */}
+        {step3Done && (
+          <div className="posting-step posting-step-animate">
+            <div className="posting-step-header">
+              <span className="step-badge active">4</span>
+              <span className="step-title">Custom Prompt</span>
+              <span className="step-optional-tag">Optional</span>
+            </div>
+            <div className="prompt-wrap">
+              <input
+                type="text"
+                className="input-field prompt-input"
+                maxLength={50}
+                placeholder="e.g. Highlight the pool and open floor plan"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+              />
+              <span className={`prompt-counter ${prompt.length >= 45 ? "near-limit" : ""}`}>
+                {prompt.length}/50
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* ══ Step 5: Begin Posting ══ */}
+        {canPost && (
+          <div className="posting-step posting-step-animate">
+            <button
+              className="begin-posting-btn"
+              onClick={handleBeginPosting}
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="begin-posting-loading">
+                  <span className="begin-spinner"></span>
+                  Sending to PopFeed…
+                </span>
+              ) : (
+                "🚀 Begin Posting"
+              )}
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   );
