@@ -123,6 +123,25 @@
   padding-top: 1rem;
 }
 
+/* ─── Platform Logo Images ─── */
+.platform-icon-img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  display: block;
+}
+
+.post-platform-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
+  position: relative;
+  top: -1px;
+}
+
 /* ─── Main Content Area ─── */
 .dash-main {
   flex: 1;

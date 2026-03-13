@@ -224,11 +224,11 @@ function DashAccounts({ user }) {
    * will be pulled from Supabase.
    */
   const [platforms, setPlatforms] = useState([
-    { id: "instagram", name: "Instagram", icon: "📸", color: "#E1306C", connected: false, handle: "" },
-    { id: "facebook", name: "Facebook", icon: "📘", color: "#1877F2", connected: false, handle: "" },
-    { id: "tiktok", name: "TikTok", icon: "🎵", color: "#00f2ea", connected: false, handle: "" },
-    { id: "linkedin", name: "LinkedIn", icon: "💼", color: "#0A66C2", connected: false, handle: "" },
-    { id: "x", name: "X (Twitter)", icon: "🐦", color: "#1DA1F2", connected: false, handle: "" },
+    { id: "instagram", name: "Instagram", logo: "https://cdn.simpleicons.org/instagram/E1306C", color: "#E1306C", connected: false, handle: "" },
+    { id: "facebook", name: "Facebook", logo: "https://cdn.simpleicons.org/facebook/1877F2", color: "#1877F2", connected: false, handle: "" },
+    { id: "tiktok", name: "TikTok", logo: "https://cdn.simpleicons.org/tiktok/ffffff", color: "#00f2ea", connected: false, handle: "" },
+    { id: "linkedin", name: "LinkedIn", logo: "https://cdn.simpleicons.org/linkedin/0A66C2", color: "#0A66C2", connected: false, handle: "" },
+    { id: "x", name: "X (Twitter)", logo: "https://cdn.simpleicons.org/x/ffffff", color: "#e2e2e2", connected: false, handle: "" },
   ]);
 
   const handleConnect = (platformId) => {
@@ -272,7 +272,7 @@ function DashAccounts({ user }) {
           >
             <div className="platform-header">
               <div className="platform-icon-wrap" style={{ background: `${platform.color}20` }}>
-                <span className="platform-icon">{platform.icon}</span>
+                <img src={platform.logo} alt={platform.name} className="platform-icon-img" />
               </div>
               <div className="platform-info">
                 <h3 className="platform-name">{platform.name}</h3>
@@ -491,7 +491,7 @@ function DashPosts({ user }) {
     {
       id: 1,
       platform: "Instagram",
-      icon: "📸",
+      logo: "https://cdn.simpleicons.org/instagram/E1306C",
       status: "posted",
       date: "2025-03-10",
       time: "10:30 AM",
@@ -503,7 +503,7 @@ function DashPosts({ user }) {
     {
       id: 2,
       platform: "Facebook",
-      icon: "📘",
+      logo: "https://cdn.simpleicons.org/facebook/1877F2",
       status: "posted",
       date: "2025-03-09",
       time: "2:15 PM",
@@ -515,7 +515,7 @@ function DashPosts({ user }) {
     {
       id: 3,
       platform: "LinkedIn",
-      icon: "💼",
+      logo: "https://cdn.simpleicons.org/linkedin/0A66C2",
       status: "scheduled",
       date: "2025-03-12",
       time: "9:00 AM",
@@ -527,7 +527,7 @@ function DashPosts({ user }) {
     {
       id: 4,
       platform: "TikTok",
-      icon: "🎵",
+      logo: "https://cdn.simpleicons.org/tiktok/000000",
       status: "draft",
       date: "2025-03-12",
       time: "",
@@ -587,7 +587,8 @@ function DashPosts({ user }) {
             <div className="post-content">
               <div className="post-meta">
                 <span className="post-platform">
-                  {post.icon} {post.platform}
+                  <img src={post.logo} alt={post.platform} className="post-platform-icon" />
+                  {post.platform}
                 </span>
                 <span
                   className="post-status"
