@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { userId } = req.body;
+  const { userId, imageUrl, style, primaryHex, secondaryHex, overlayPrompt, listingUrl } = req.body;
   if (!userId) return res.status(400).json({ error: 'Missing userId' });
 
   // Verify the user has an active subscription
@@ -73,6 +73,12 @@ export default async function handler(req, res) {
         agent_name: settings.agent_name,
         business_name: settings.business_name,
         custom_prompt: settings.custom_prompt,
+        image_url: imageUrl || null,
+        style: style || null,
+        primary_hex: primaryHex || null,
+        secondary_hex: secondaryHex || null,
+        overlay_prompt: overlayPrompt || null,
+        listing_url: listingUrl || null,
       }),
     });
 

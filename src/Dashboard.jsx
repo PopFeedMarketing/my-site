@@ -1086,50 +1086,41 @@ const STYLE_OPTIONS = [
 ];
 
 function DashPosting({ user, setDashPage }) {
-  const [heroImage, setHeroImage]         = useState(null);  // base64 data URL
+  const [heroFile, setHeroFile]           = useState(null);  // original File object
   const [heroPreview, setHeroPreview]     = useState(null);  // display URL
+  const [listingUrl, setListingUrl]       = useState("");
   const [style, setStyle]                 = useState(null);
   const [primaryColor, setPrimaryColor]   = useState(null);
   const [secondaryColor, setSecondaryColor] = useState(null);
   const [prompt, setPrompt]               = useState("");
   const [dragOver, setDragOver]           = useState(false);
   const [loading, setLoading]             = useState(false);
+  const [error, setError]                 = useState("");
   const [success, setSuccess]             = useState(false);
   const [settings, setSettings]           = useState(null);
   const fileInputRef = useRef(null);
 
   // Derived step unlock logic
-  const step1Done = !!heroImage;
-  const step2Done = step1Done && !!style;
+  const step1Done = !!heroFile;
+  const step2Done = step1Done && !!style;       // listing URL is optional, doesn't block
   const step3Done = step2Done && !!primaryColor && !!secondaryColor;
-  const canPost   = step3Done; // Step 4 is optional
+  const canPost   = step3Done; // Step 4 + listing URL are optional
 
   // Fetch agent settings from Supabase
   useEffect(() => {
-    /*
-     * EDIT: Update the table name below to match your Supabase schema.
-     * This assumes a table called 'agent_settings' with a 'user_id' column.
-     */
-    const fetchSettings = async () => {
-      if (!user?.id) return;
-      const { data } = await supabase
-        .from("agent_settings")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-      if (data) setSettings(data);
-    };
-    fetchSettings();
+    if (!user?.id) return;
+    supabase
+      .from("user_settings")
+      .select("*")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => { if (data) setSettings(data); });
   }, [user]);
 
   const handleImageFile = (file) => {
     if (!file || !file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setHeroImage(e.target.result);
-      setHeroPreview(e.target.result);
-    };
-    reader.readAsDataURL(file);
+    setHeroFile(file);
+    setHeroPreview(URL.createObjectURL(file));
   };
 
   const handleDrop = (e) => {
@@ -1139,10 +1130,9 @@ function DashPosting({ user, setDashPage }) {
   };
 
   const handleRemoveImage = () => {
-    setHeroImage(null);
+    setHeroFile(null);
     setHeroPreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
-    // Reset all downstream steps
     setStyle(null);
     setPrimaryColor(null);
     setSecondaryColor(null);
@@ -1151,45 +1141,56 @@ function DashPosting({ user, setDashPage }) {
 
   const resetFlow = () => {
     setSuccess(false);
-    setHeroImage(null);
+    setHeroFile(null);
     setHeroPreview(null);
+    setListingUrl("");
     setStyle(null);
     setPrimaryColor(null);
     setSecondaryColor(null);
     setPrompt("");
+    setError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleBeginPosting = async () => {
     setLoading(true);
-    const payload = {
-      image:          heroImage,
-      style,
-      primaryColor:   primaryColor.name,
-      primaryHex:     primaryColor.hex,
-      secondaryColor: secondaryColor.name,
-      secondaryHex:   secondaryColor.hex,
-      prompt,
-      userId:         user.id,
-      userEmail:      user.email,
-      settings:       settings || {},
-    };
+    setError("");
 
     try {
-      /*
-       * EDIT: Replace the URL below with your actual n8n webhook URL.
-       * Example: "https://popfeed.app.n8n.cloud/webhook/begin-posting"
-       */
-      const response = await fetch("https://your-n8n.app.n8n.cloud/webhook/begin-posting", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      // 1. Upload image to Supabase Storage
+      const ext = heroFile.name.split('.').pop();
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('post-images')
+        .upload(path, heroFile, { contentType: heroFile.type, upsert: false });
+
+      if (uploadError) throw new Error(`Image upload failed: ${uploadError.message}`);
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('post-images')
+        .getPublicUrl(uploadData.path);
+
+      // 2. Trigger automation with image + overlay params
+      const response = await fetch('/api/trigger-automation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId:         user.id,
+          imageUrl:       publicUrl,
+          style,
+          primaryHex:     primaryColor.hex,
+          secondaryHex:   secondaryColor.hex,
+          overlayPrompt:  prompt,
+          listingUrl:     listingUrl.trim() || null,
+        }),
       });
-      if (!response.ok) throw new Error("Webhook failed");
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Automation failed');
       setSuccess(true);
     } catch (err) {
       console.error("Begin posting error:", err.message);
-      // EDIT: Add a toast/error message here for the user
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -1240,7 +1241,7 @@ function DashPosting({ user, setDashPage }) {
             {step1Done && <span className="step-done-tag">✓ Uploaded</span>}
           </div>
 
-          {!heroImage ? (
+          {!heroFile ? (
             <div
               className={`upload-zone ${dragOver ? "drag-over" : ""}`}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -1269,12 +1270,36 @@ function DashPosting({ user, setDashPage }) {
           )}
         </div>
 
-        {/* ══ Step 2: Style ══ */}
+        {/* ══ Step 2: Listing URL (optional) ══ */}
+        {step1Done && (
+          <div className="posting-step posting-step-animate">
+            <div className="posting-step-header">
+              <span className="step-badge active">2</span>
+              <span className="step-title">Listing URL</span>
+              <span className="step-optional-tag">Optional</span>
+              {listingUrl.trim() && <span className="step-done-tag">✓ Added</span>}
+            </div>
+            <div className="prompt-wrap">
+              <input
+                type="url"
+                className="input-field prompt-input"
+                placeholder="https://www.zillow.com/homedetails/..."
+                value={listingUrl}
+                onChange={(e) => setListingUrl(e.target.value)}
+              />
+            </div>
+            <p style={{ fontSize: "0.78rem", color: "var(--text-dim)", marginTop: "0.4rem" }}>
+              Paste a Zillow, Redfin, or Realtor.com link to auto-fill price, beds, baths, and more.
+            </p>
+          </div>
+        )}
+
+        {/* ══ Step 3: Style ══ */}
         {step1Done && (
           <div className="posting-step posting-step-animate">
             <div className="posting-step-header">
               <span className={`step-badge ${step2Done ? "done" : "active"}`}>
-                {step2Done ? "✓" : "2"}
+                {step2Done ? "✓" : "3"}
               </span>
               <span className="step-title">Visual Style</span>
               {step2Done && (
@@ -1302,12 +1327,12 @@ function DashPosting({ user, setDashPage }) {
           </div>
         )}
 
-        {/* ══ Step 3: Colors ══ */}
+        {/* ══ Step 4: Colors ══ */}
         {step2Done && (
           <div className="posting-step posting-step-animate">
             <div className="posting-step-header">
               <span className={`step-badge ${step3Done ? "done" : "active"}`}>
-                {step3Done ? "✓" : "3"}
+                {step3Done ? "✓" : "4"}
               </span>
               <span className="step-title">Brand Colors</span>
               {step3Done && (
@@ -1374,11 +1399,11 @@ function DashPosting({ user, setDashPage }) {
           </div>
         )}
 
-        {/* ══ Step 4: Custom Prompt (optional) ══ */}
+        {/* ══ Step 5: Custom Prompt (optional) ══ */}
         {step3Done && (
           <div className="posting-step posting-step-animate">
             <div className="posting-step-header">
-              <span className="step-badge active">4</span>
+              <span className="step-badge active">5</span>
               <span className="step-title">Custom Prompt</span>
               <span className="step-optional-tag">Optional</span>
             </div>
@@ -1401,6 +1426,11 @@ function DashPosting({ user, setDashPage }) {
         {/* ══ Step 5: Begin Posting ══ */}
         {canPost && (
           <div className="posting-step posting-step-animate">
+            {error && (
+              <p style={{ color: "#ff6b6b", fontSize: "0.875rem", marginBottom: "0.75rem" }}>
+                {error}
+              </p>
+            )}
             <button
               className="begin-posting-btn"
               onClick={handleBeginPosting}
@@ -1409,7 +1439,7 @@ function DashPosting({ user, setDashPage }) {
               {loading ? (
                 <span className="begin-posting-loading">
                   <span className="begin-spinner"></span>
-                  Sending to PopFeed…
+                  Uploading & generating…
                 </span>
               ) : (
                 "🚀 Begin Posting"
