@@ -942,6 +942,13 @@ export default function App() {
   return () => subscription.unsubscribe();
 }, []);
 
+  // Redirect to home when user logs in while on login/signup page
+  useEffect(() => {
+    if (user && (page === 'login' || page === 'signup')) {
+      setPage('home');
+    }
+  }, [user]);
+
   // Scroll to top when changing pages
   const changePage = (newPage) => {
     setPage(newPage);
