@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     // Update their profile in Supabase
     const { error } = await supabase
       .from('profiles')
-      .update({ subscription: plan })
+      .update({ subscription: plan, stripe_customer_id: session.customer })
       .eq('id', userId);
 
     if (error) {

@@ -152,16 +152,37 @@ export default function Dashboard({ user, setPage }) {
 //  OVERVIEW PAGE
 // ════════════════════════════════════════════
 function DashOverview({ user, setDashPage }) {
-  /*
-   * EDIT: These are placeholder stats.
-   * Once n8n is integrated, these will pull from Supabase.
-   */
+  const [running, setRunning] = useState(false);
+  const [runStatus, setRunStatus] = useState(null); // null | 'success' | 'error'
+  const [runError, setRunError] = useState("");
+
   const quickStats = [
     { label: "Total Views", value: "0", icon: "👁️", color: "#ff6b9d" },
     { label: "Total Likes", value: "0", icon: "❤️", color: "#b388ff" },
     { label: "Posts Created", value: "0", icon: "📝", color: "#7ec8e3" },
     { label: "Accounts Linked", value: "0", icon: "🔗", color: "#ff6b9d" },
   ];
+
+  const handleRunAutomation = async () => {
+    setRunning(true);
+    setRunStatus(null);
+    setRunError("");
+    try {
+      const response = await fetch('/api/trigger-automation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Automation failed');
+      setRunStatus('success');
+    } catch (err) {
+      setRunStatus('error');
+      setRunError(err.message);
+    } finally {
+      setRunning(false);
+    }
+  };
 
   return (
     <div className="dash-content">
@@ -211,6 +232,37 @@ function DashOverview({ user, setDashPage }) {
           <span className="dash-action-icon">⚙️</span>
           <span className="dash-action-label">Agent Settings</span>
           <span className="dash-action-desc">Configure your posting preferences</span>
+        </button>
+      </div>
+
+      {/* Run Automation */}
+      <div className="dash-header" style={{ marginTop: "2.5rem" }}>
+        <h2 className="dash-section-title">Automation</h2>
+      </div>
+      <div className="glass-card" style={{ padding: "1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+        <div>
+          <p style={{ fontWeight: 600, marginBottom: "0.25rem" }}>Run Your Automation Now</p>
+          <p style={{ color: "var(--text-dim)", fontSize: "0.875rem" }}>
+            Triggers n8n to generate and schedule posts based on your settings.
+          </p>
+          {runStatus === 'success' && (
+            <p style={{ color: "#7ec8e3", marginTop: "0.5rem", fontSize: "0.875rem" }}>
+              ✓ Automation started! Check the Posts tab for results.
+            </p>
+          )}
+          {runStatus === 'error' && (
+            <p style={{ color: "#ff6b6b", marginTop: "0.5rem", fontSize: "0.875rem" }}>
+              {runError}
+            </p>
+          )}
+        </div>
+        <button
+          className="btn-primary"
+          onClick={handleRunAutomation}
+          disabled={running}
+          style={{ whiteSpace: "nowrap" }}
+        >
+          {running ? "Running..." : "▶ Run Now"}
         </button>
       </div>
     </div>
@@ -640,37 +692,93 @@ function DashPosts({ user }) {
 //  SETTINGS PAGE — Agent Preferences
 // ════════════════════════════════════════════
 function DashSettings({ user }) {
+  const defaultPostTypes = {
+    listings: true,
+    marketUpdates: true,
+    tips: true,
+    testimonials: false,
+    behindTheScenes: false,
+  };
+
   const [settings, setSettings] = useState({
     agentName: user.name || "",
     businessName: "",
     postFrequency: "daily",
-    postTypes: {
-      listings: true,
-      marketUpdates: true,
-      tips: true,
-      testimonials: false,
-      behindTheScenes: false,
-    },
+    postTypes: defaultPostTypes,
     preferredTimes: "morning",
     tone: "professional",
     hashtags: true,
     autoPost: false,
+    platforms: [],
+    customPrompt: "",
   });
 
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
-  const handleSave = () => {
-    /*
-     * EDIT: Save settings to Supabase.
-     * Example:
-     * supabase.from('agent_settings').upsert({
-     *   user_id: user.id,
-     *   ...settings
-     * });
-     */
-    console.log("Settings saved:", settings);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  // Load existing settings from Supabase on mount
+  useEffect(() => {
+    supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setSettings({
+            agentName: data.agent_name || user.name || "",
+            businessName: data.business_name || "",
+            postFrequency: data.post_frequency || "daily",
+            postTypes: data.post_types || defaultPostTypes,
+            preferredTimes: data.preferred_times || "morning",
+            tone: data.tone || "professional",
+            hashtags: data.hashtags ?? true,
+            autoPost: data.auto_post ?? false,
+            platforms: data.platforms || [],
+            customPrompt: data.custom_prompt || "",
+          });
+        }
+        setLoading(false);
+      });
+  }, [user.id]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError("");
+    const { error } = await supabase
+      .from('user_settings')
+      .upsert({
+        user_id: user.id,
+        agent_name: settings.agentName,
+        business_name: settings.businessName,
+        post_frequency: settings.postFrequency,
+        post_types: settings.postTypes,
+        preferred_times: settings.preferredTimes,
+        tone: settings.tone,
+        hashtags: settings.hashtags,
+        auto_post: settings.autoPost,
+        platforms: settings.platforms,
+        custom_prompt: settings.customPrompt,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+    setSaving(false);
+    if (error) {
+      setSaveError("Failed to save settings. Please try again.");
+    } else {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    }
+  };
+
+  const togglePlatform = (platform) => {
+    setSettings((prev) => ({
+      ...prev,
+      platforms: prev.platforms.includes(platform)
+        ? prev.platforms.filter((p) => p !== platform)
+        : [...prev.platforms, platform],
+    }));
   };
 
   const updatePostType = (key) => {
@@ -679,6 +787,17 @@ function DashSettings({ user }) {
       postTypes: { ...prev.postTypes, [key]: !prev.postTypes[key] },
     }));
   };
+
+  if (loading) {
+    return (
+      <div className="dash-content">
+        <div className="dash-header">
+          <h1 className="dash-title">Agent Settings</h1>
+          <p className="dash-subtitle">Loading your settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="dash-content">
@@ -838,10 +957,52 @@ function DashSettings({ user }) {
         </div>
       </div>
 
+        {/* Platforms */}
+        <div className="glass-card settings-card">
+          <h3 className="settings-card-title">Target Platforms</h3>
+          <p className="settings-card-desc">Which platforms should PopFeed post to?</p>
+          <div className="settings-toggles">
+            {["Instagram", "TikTok", "X", "Facebook", "LinkedIn"].map((platform) => {
+              const key = platform.toLowerCase();
+              return (
+                <div key={key} className="settings-toggle-row">
+                  <div className="toggle-info">
+                    <span className="toggle-label">{platform}</span>
+                  </div>
+                  <button
+                    className={`toggle-switch ${settings.platforms.includes(key) ? "on" : ""}`}
+                    onClick={() => togglePlatform(key)}
+                  >
+                    <span className="toggle-knob"></span>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Custom Prompt */}
+        <div className="glass-card settings-card">
+          <h3 className="settings-card-title">Niche & Brand Description</h3>
+          <p className="settings-card-desc">
+            Tell the AI about your business in your own words. This is the core prompt n8n uses to generate content.
+          </p>
+          <div className="input-group">
+            <textarea
+              className="input-field textarea"
+              rows={4}
+              placeholder="e.g. I'm a luxury real estate agent in Austin, TX specializing in lakefront properties. My audience is high-net-worth buyers aged 35–55."
+              value={settings.customPrompt}
+              onChange={(e) => setSettings({ ...settings, customPrompt: e.target.value })}
+            />
+          </div>
+        </div>
+
       {/* Save Button */}
       <div className="settings-save">
-        <button className="btn-primary btn-large" onClick={handleSave}>
-          {saved ? "✓ Settings Saved!" : "Save Settings"}
+        {saveError && <p style={{ color: '#ff6b6b', marginBottom: '0.75rem' }}>{saveError}</p>}
+        <button className="btn-primary btn-large" onClick={handleSave} disabled={saving}>
+          {saving ? "Saving..." : saved ? "✓ Settings Saved!" : "Save Settings"}
         </button>
       </div>
     </div>

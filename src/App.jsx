@@ -392,14 +392,31 @@ if (data.url) window.location.href = data.url;
 function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // EDIT: Hook this up to your backend, email service, or n8n webhook
-    // Example: fetch("https://your-n8n-webhook.com/contact", { method: "POST", body: JSON.stringify(form) })
-    console.log("Contact form submitted:", form);
-    setSent(true);
-    setForm({ name: "", email: "", message: "" });
+    if (!form.name || !form.email || !form.message) {
+      setError("Please fill in all fields.");
+      return;
+    }
+    setSending(true);
+    setError("");
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      if (!response.ok) throw new Error('Failed to send');
+      setSent(true);
+      setForm({ name: "", email: "", message: "" });
+    } catch {
+      setError("Something went wrong. Please try again or email us directly.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -418,6 +435,7 @@ function ContactPage() {
               </div>
             ) : (
               <>
+                {error && <div className="auth-error">{error}</div>}
                 <div className="input-group">
                   <label className="input-label">Name</label>
                   <input
@@ -426,7 +444,6 @@ function ContactPage() {
                     placeholder="Your name"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
                   />
                 </div>
                 <div className="input-group">
@@ -437,7 +454,6 @@ function ContactPage() {
                     placeholder="you@example.com"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    required
                   />
                 </div>
                 <div className="input-group">
@@ -448,10 +464,11 @@ function ContactPage() {
                     rows={5}
                     value={form.message}
                     onChange={(e) => setForm({ ...form, message: e.target.value })}
-                    required
                   />
                 </div>
-                <button className="btn-primary btn-full" onClick={handleSubmit}>Send Message</button>
+                <button className="btn-primary btn-full" onClick={handleSubmit} disabled={sending}>
+                  {sending ? "Sending..." : "Send Message"}
+                </button>
               </>
             )}
           </div>
@@ -822,10 +839,26 @@ function AccountPage({ user, setPage }) {
               </li>
             ))}
           </ul>
-          {(!user?.subscription || user?.subscription === 'free') && (
+          {(!user?.subscription || user?.subscription === 'free') ? (
             <button className="btn-primary btn-full" style={{ marginTop: '1rem' }} onClick={() => setPage("pricing")}>
-  	Choose a Plan
-		</button>
+              Choose a Plan
+            </button>
+          ) : (
+            <button
+              className="btn-outline btn-full"
+              style={{ marginTop: '1rem' }}
+              onClick={async () => {
+                const response = await fetch('/api/create-portal-session', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId: user.id, userEmail: user.email }),
+                });
+                const data = await response.json();
+                if (data.url) window.location.href = data.url;
+              }}
+            >
+              Manage Subscription
+            </button>
           )}
         </div>
       </div>
@@ -869,23 +902,43 @@ export default function App() {
   const [user, setUser] = useState(null);
 
  useEffect(() => {
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session?.user) {
-      supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-        .then(({ data: profile }) => {
-          setUser({
-            name: profile?.name || session.user.email.split("@")[0],
-            email: session.user.email,
-            id: session.user.id,
-            subscription: profile?.subscription || 'free',
-          });
-        });
+  const loadProfile = async (sessionUser) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', sessionUser.id)
+      .single();
+    setUser({
+      name: profile?.name || sessionUser.email.split("@")[0],
+      email: sessionUser.email,
+      id: sessionUser.id,
+      subscription: profile?.subscription || 'free',
+    });
+  };
+
+  // Handle post-payment redirect from Stripe (?success=true)
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('success') === 'true') {
+    window.history.replaceState({}, '', '/');
+    // Delay slightly to give the Stripe webhook time to update Supabase
+    setTimeout(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) await loadProfile(session.user);
+    }, 2500);
+  }
+
+  // Auth state listener — fires on initial load, sign-in, sign-out, and token refresh
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (_event, session) => {
+      if (session?.user) {
+        await loadProfile(session.user);
+      } else {
+        setUser(null);
+      }
     }
-  });
+  );
+
+  return () => subscription.unsubscribe();
 }, []);
 
   // Scroll to top when changing pages
@@ -898,7 +951,7 @@ export default function App() {
     switch (page) {
       case "home":    return <HomePage setPage={changePage} user={user} />;
       case "pricing": return <PricingPage setPage={changePage} user={user} />;
-      case "examples": return <ExamplesPage setPage={changePage} />;
+      case "examples": return <ExamplesPage setPage={changePage} user={user} />;
       case "contact": return <ContactPage />;
       case "account": return <AccountPage user={user} setPage={changePage} />;
       case "login":   return <LoginPage setPage={changePage} setUser={setUser} />;
