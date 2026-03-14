@@ -535,7 +535,7 @@ function LoginPage({ setPage, setUser }) {
       id: data.user.id,
       subscription: profile?.subscription || 'free',
     });
-    setPage("home");
+    window.location.reload();
   } catch (err) {
     setError("Something went wrong. Please try again.");
     console.error("Login error:", err);
