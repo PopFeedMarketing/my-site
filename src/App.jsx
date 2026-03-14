@@ -507,30 +507,28 @@ function LoginPage({ setPage, setUser }) {
     return;
   }
 
-  const { data, error: loginError } = await supabase.auth.signInWithPassword({
-    email: form.email,
-    password: form.password,
-  });
+  try {
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      email: form.email,
+      password: form.password,
+    });
 
-  if (loginError) {
-    setError(loginError.message);
-    return;
+    if (loginError) {
+      setError(loginError.message);
+      return;
+    }
+
+    if (!data.user) {
+      setError("Login failed. Please confirm your email or try again.");
+      return;
+    }
+
+    // onAuthStateChange will handle setting the user — just navigate
+    setPage("home");
+  } catch (err) {
+    setError("Something went wrong. Please try again.");
+    console.error("Login error:", err);
   }
-
-  // Fetch their profile
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', data.user.id)
-    .single();
-
-  setUser({
-    name: profile?.name || form.email.split("@")[0],
-    email: form.email,
-    id: data.user.id,
-    subscription: profile?.subscription || 'free',
-  });
-  setPage("home");
 };
 
   return (
@@ -929,9 +927,12 @@ export default function App() {
 
   // Auth state listener — fires on initial load, sign-in, sign-out, and token refresh
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
+    async (event, session) => {
       if (session?.user) {
         await loadProfile(session.user);
+        if (event === 'SIGNED_IN') {
+          setPage('home');
+        }
       } else {
         setUser(null);
       }
