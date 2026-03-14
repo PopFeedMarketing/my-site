@@ -605,6 +605,7 @@ function DashPosts({ user }) {
   const [filter, setFilter] = useState("all");
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
     supabase
@@ -697,7 +698,7 @@ function DashPosts({ user }) {
           filteredPosts.map((post) => (
             <div key={post.id} className="glass-card post-card">
               {post.imageUrl && (
-                <div className="post-image-wrap">
+                <div className="post-image-wrap" onClick={() => setLightbox(post.imageUrl)} style={{ cursor: "zoom-in" }}>
                   <img src={post.imageUrl} alt="" className="post-image" />
                 </div>
               )}
@@ -736,6 +737,26 @@ function DashPosts({ user }) {
           ))
         )}
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          onClick={() => setLightbox(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 1000,
+            background: "rgba(0,0,0,0.85)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "zoom-out",
+          }}
+        >
+          <img
+            src={lightbox}
+            alt=""
+            style={{ maxWidth: "90vw", maxHeight: "90vh", borderRadius: "12px", boxShadow: "0 8px 40px rgba(0,0,0,0.6)" }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
