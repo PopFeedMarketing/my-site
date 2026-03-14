@@ -629,6 +629,7 @@ function DashPosts({ user }) {
               date: d.toLocaleDateString(),
               time: p.posted_at ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
               caption: p.content,
+              imageUrl: p.image_url || null,
               engagement: latestAnalytics
                 ? { views: latestAnalytics.views, likes: latestAnalytics.likes }
                 : null,
@@ -695,6 +696,11 @@ function DashPosts({ user }) {
         ) : (
           filteredPosts.map((post) => (
             <div key={post.id} className="glass-card post-card">
+              {post.imageUrl && (
+                <div className="post-image-wrap">
+                  <img src={post.imageUrl} alt="" className="post-image" />
+                </div>
+              )}
               <div className="post-content">
                 <div className="post-meta">
                   <span className="post-platform">
