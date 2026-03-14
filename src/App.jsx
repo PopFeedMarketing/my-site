@@ -518,12 +518,23 @@ function LoginPage({ setPage, setUser }) {
       return;
     }
 
-    if (!data.user) {
+    if (!data?.user) {
       setError("Login failed. Please confirm your email or try again.");
       return;
     }
 
-    // onAuthStateChange will handle setting the user — just navigate
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+
+    setUser({
+      name: profile?.name || data.user.email.split("@")[0],
+      email: data.user.email,
+      id: data.user.id,
+      subscription: profile?.subscription || 'free',
+    });
     setPage("home");
   } catch (err) {
     setError("Something went wrong. Please try again.");
