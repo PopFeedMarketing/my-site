@@ -191,6 +191,18 @@ function HomePage({ setPage, user }) {
       description: "From lead capture to follow-up sequences, automate the repetitive tasks that eat up your day.",
       color: "blue",
     },
+    {
+      icon: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M9 21V9"/>
+          <path d="M15 13h3M15 17h3"/>
+        </svg>
+      ),
+      title: "Customizable Posts",
+      description: "Choose from multiple visual styles and add custom prompts to tailor every post. Your brand, your voice, your way.",
+      color: "purple",
+    },
   ];
 
   /*
