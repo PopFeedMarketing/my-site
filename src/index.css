@@ -27,17 +27,17 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-border-hover: rgba(255, 255, 255, 0.18);
 
-  --peach:        #ffb399;
-  --peach-dim:    rgba(255, 179, 153, 0.15);
-  --peach-glow:   rgba(255, 179, 153, 0.25);
+  --peach:        #ff4d80;
+  --peach-dim:    rgba(255, 77, 128, 0.15);
+  --peach-glow:   rgba(255, 77, 128, 0.25);
 
-  --purple:       #b388ff;
-  --purple-dim:   rgba(179, 136, 255, 0.15);
-  --purple-glow:  rgba(179, 136, 255, 0.25);
+  --purple:       #9966ff;
+  --purple-dim:   rgba(153, 102, 255, 0.15);
+  --purple-glow:  rgba(153, 102, 255, 0.25);
 
-  --slblue:       #7ec8e3;
-  --slblue-dim:   rgba(126, 200, 227, 0.15);
-  --slblue-glow:  rgba(126, 200, 227, 0.25);
+  --slblue:       #55ccee;
+  --slblue-dim:   rgba(85, 204, 238, 0.15);
+  --slblue-glow:  rgba(85, 204, 238, 0.25);
 
   --text:         #e8e8e8;
   --text-dim:     #888888;
