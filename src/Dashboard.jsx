@@ -725,7 +725,7 @@ function DashSettings({ user }) {
       .select('*')
       .eq('user_id', user.id)
       .single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         if (data) {
           setSettings({
             agentName: data.agent_name || user.name || "",
@@ -740,8 +740,13 @@ function DashSettings({ user }) {
             customPrompt: data.custom_prompt || "",
           });
         }
+        // PGRST116 = no row found (first time user) — not a real error
+        if (error && error.code !== 'PGRST116') {
+          console.error('Failed to load settings:', error.message);
+        }
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, [user.id]);
 
   const handleSave = async () => {
