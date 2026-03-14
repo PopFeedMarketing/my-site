@@ -155,7 +155,7 @@ function HomePage({ setPage, user }) {
       ),
       title: "Custom Scheduling",
       description: "Set your own posting schedule or let PopFeed suggest optimal times. Full control over when and how often you post.",
-      color: "purple",
+      color: "blue",
     },
     {
       icon: (
@@ -166,7 +166,7 @@ function HomePage({ setPage, user }) {
       ),
       title: "Analytics Dashboard",
       description: "Track performance, audience growth, and engagement trends in one clean dashboard. Know what's working and what's not.",
-      color: "blue",
+      color: "purple",
     },
     {
       icon: (
