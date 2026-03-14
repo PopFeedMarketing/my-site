@@ -155,12 +155,37 @@ function DashOverview({ user, setDashPage }) {
   const [running, setRunning] = useState(false);
   const [runStatus, setRunStatus] = useState(null); // null | 'success' | 'error'
   const [runError, setRunError] = useState("");
+  const [stats, setStats] = useState({ views: 0, likes: 0, posts: 0, accounts: 0 });
+
+  useEffect(() => {
+    // Posts count
+    supabase
+      .from('posts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .then(({ count }) => setStats(s => ({ ...s, posts: count || 0 })));
+
+    // Analytics totals
+    supabase
+      .from('post_analytics')
+      .select('views, likes')
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          const totalViews = data.reduce((sum, r) => sum + (r.views || 0), 0);
+          const totalLikes = data.reduce((sum, r) => sum + (r.likes || 0), 0);
+          setStats(s => ({ ...s, views: totalViews, likes: totalLikes }));
+        }
+      });
+
+    // Accounts linked: 0 until OAuth is implemented
+  }, [user.id]);
 
   const quickStats = [
-    { label: "Total Views", value: "0", icon: "👁️", color: "#ff6b9d" },
-    { label: "Total Likes", value: "0", icon: "❤️", color: "#b388ff" },
-    { label: "Posts Created", value: "0", icon: "📝", color: "#7ec8e3" },
-    { label: "Accounts Linked", value: "0", icon: "🔗", color: "#ff6b9d" },
+    { label: "Total Views", value: stats.views.toLocaleString(), icon: "👁️", color: "#ff6b9d" },
+    { label: "Total Likes", value: stats.likes.toLocaleString(), icon: "❤️", color: "#b388ff" },
+    { label: "Posts Created", value: stats.posts.toLocaleString(), icon: "📝", color: "#7ec8e3" },
+    { label: "Accounts Linked", value: stats.accounts.toString(), icon: "🔗", color: "#ff6b9d" },
   ];
 
   const handleRunAutomation = async () => {
@@ -378,40 +403,58 @@ function DashAccounts({ user }) {
 function DashAnalytics({ user }) {
   const [selectedPlatform, setSelectedPlatform] = useState("all");
   const [timeRange, setTimeRange] = useState("7d");
+  const [analyticsRows, setAnalyticsRows] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  /*
-   * EDIT: This is placeholder data.
-   * Once n8n is integrated, this data will come from Supabase
-   * populated by your n8n analytics workflows.
-   */
-  const sampleData = {
-    "7d": [
-      { date: "Mon", views: 120, likes: 45, impressions: 340 },
-      { date: "Tue", views: 185, likes: 62, impressions: 520 },
-      { date: "Wed", views: 210, likes: 78, impressions: 610 },
-      { date: "Thu", views: 165, likes: 55, impressions: 480 },
-      { date: "Fri", views: 290, likes: 98, impressions: 780 },
-      { date: "Sat", views: 340, likes: 125, impressions: 920 },
-      { date: "Sun", views: 280, likes: 110, impressions: 850 },
-    ],
-    "30d": [
-      { date: "Week 1", views: 890, likes: 320, impressions: 2400 },
-      { date: "Week 2", views: 1250, likes: 485, impressions: 3600 },
-      { date: "Week 3", views: 1580, likes: 610, impressions: 4200 },
-      { date: "Week 4", views: 1820, likes: 720, impressions: 5100 },
-    ],
-    "90d": [
-      { date: "Month 1", views: 4200, likes: 1600, impressions: 12000 },
-      { date: "Month 2", views: 6800, likes: 2400, impressions: 18500 },
-      { date: "Month 3", views: 9200, likes: 3500, impressions: 26000 },
-    ],
+  useEffect(() => {
+    const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : 90;
+    const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    let query = supabase
+      .from('post_analytics')
+      .select('views, likes, reach, fetched_at, posts(platform)')
+      .eq('user_id', user.id)
+      .gte('fetched_at', from)
+      .order('fetched_at', { ascending: true });
+
+    query.then(({ data, error }) => {
+      if (error) console.error('Failed to load analytics:', error.message);
+      let rows = data || [];
+      if (selectedPlatform !== 'all') {
+        rows = rows.filter(r => r.posts?.platform === selectedPlatform);
+      }
+      setAnalyticsRows(rows);
+      setLoading(false);
+    });
+  }, [user.id, timeRange, selectedPlatform]);
+
+  // Group rows by time bucket and aggregate
+  const buildChartData = () => {
+    if (analyticsRows.length === 0) return [];
+    const buckets = {};
+    analyticsRows.forEach(r => {
+      const d = new Date(r.fetched_at);
+      let key;
+      if (timeRange === "7d") {
+        key = d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
+      } else if (timeRange === "30d") {
+        const weekNum = Math.ceil(d.getDate() / 7);
+        key = `${d.toLocaleDateString(undefined, { month: 'short' })} W${weekNum}`;
+      } else {
+        key = d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+      }
+      if (!buckets[key]) buckets[key] = { date: key, views: 0, likes: 0, reach: 0 };
+      buckets[key].views += r.views || 0;
+      buckets[key].likes += r.likes || 0;
+      buckets[key].reach += r.reach || 0;
+    });
+    return Object.values(buckets);
   };
 
-  const chartData = sampleData[timeRange] || sampleData["7d"];
-
-  const totalViews = chartData.reduce((sum, d) => sum + d.views, 0);
-  const totalLikes = chartData.reduce((sum, d) => sum + d.likes, 0);
-  const totalImpressions = chartData.reduce((sum, d) => sum + d.impressions, 0);
+  const chartData = buildChartData();
+  const totalViews = analyticsRows.reduce((sum, r) => sum + (r.views || 0), 0);
+  const totalLikes = analyticsRows.reduce((sum, r) => sum + (r.likes || 0), 0);
+  const totalReach = analyticsRows.reduce((sum, r) => sum + (r.reach || 0), 0);
 
   const platformOptions = [
     { id: "all", label: "All Platforms" },
@@ -480,9 +523,9 @@ function DashAnalytics({ user }) {
           </span>
         </div>
         <div className="glass-card analytics-stat">
-          <span className="analytics-stat-label">Total Impressions</span>
+          <span className="analytics-stat-label">Total Reach</span>
           <span className="analytics-stat-value" style={{ color: "#7ec8e3" }}>
-            {totalImpressions.toLocaleString()}
+            {totalReach.toLocaleString()}
           </span>
         </div>
       </div>
@@ -490,48 +533,58 @@ function DashAnalytics({ user }) {
       {/* Chart */}
       <div className="glass-card analytics-chart-card">
         <h3 className="chart-title">Performance Over Time</h3>
-        <div className="chart-container">
-          <ResponsiveContainer width="100%" height={350}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey="date" stroke="#888" fontSize={12} />
-              <YAxis stroke="#888" fontSize={12} />
-              <Tooltip
-                contentStyle={{
-                  background: "#1a1a1a",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: "8px",
-                  color: "#e8e8e8",
-                }}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="views"
-                stroke="#ff6b9d"
-                strokeWidth={2}
-                dot={{ fill: "#ff6b9d", r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="likes"
-                stroke="#b388ff"
-                strokeWidth={2}
-                dot={{ fill: "#b388ff", r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="impressions"
-                stroke="#7ec8e3"
-                strokeWidth={2}
-                dot={{ fill: "#7ec8e3", r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        {loading ? (
+          <p style={{ color: "var(--text-dim)", padding: "2rem 0", textAlign: "center" }}>
+            Loading analytics...
+          </p>
+        ) : chartData.length === 0 ? (
+          <p style={{ color: "var(--text-dim)", padding: "2rem 0", textAlign: "center" }}>
+            No analytics data yet. Data will appear here once your posts start getting engagement.
+          </p>
+        ) : (
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis dataKey="date" stroke="#888" fontSize={12} />
+                <YAxis stroke="#888" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    background: "#1a1a1a",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: "8px",
+                    color: "#e8e8e8",
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="views"
+                  stroke="#ff6b9d"
+                  strokeWidth={2}
+                  dot={{ fill: "#ff6b9d", r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="likes"
+                  stroke="#b388ff"
+                  strokeWidth={2}
+                  dot={{ fill: "#b388ff", r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="reach"
+                  stroke="#7ec8e3"
+                  strokeWidth={2}
+                  dot={{ fill: "#7ec8e3", r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -540,64 +593,51 @@ function DashAnalytics({ user }) {
 // ════════════════════════════════════════════
 //  POSTS PAGE — View Generated Content
 // ════════════════════════════════════════════
+const PLATFORM_LOGOS = {
+  instagram: "https://cdn.simpleicons.org/instagram/E1306C",
+  facebook: "https://cdn.simpleicons.org/facebook/1877F2",
+  tiktok: "https://cdn.simpleicons.org/tiktok/ffffff",
+  linkedin: "https://cdn.simpleicons.org/linkedin/0A66C2",
+  x: "https://cdn.simpleicons.org/x/ffffff",
+};
+
 function DashPosts({ user }) {
   const [filter, setFilter] = useState("all");
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  /*
-   * EDIT: This is placeholder data.
-   * Once n8n is integrated, posts will be stored in Supabase
-   * and loaded here.
-   */
-  const [posts] = useState([
-    {
-      id: 1,
-      platform: "Instagram",
-      logo: "https://cdn.simpleicons.org/instagram/E1306C",
-      status: "posted",
-      date: "2025-03-10",
-      time: "10:30 AM",
-      caption:
-        "✨ Just Listed! Stunning 4-bed home in Westlake with an open floor plan and heated pool. Schedule your showing today! 🏡 #JustListed #DreamHome",
-      image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop",
-      engagement: { views: 342, likes: 89, comments: 12 },
-    },
-    {
-      id: 2,
-      platform: "Facebook",
-      logo: "https://cdn.simpleicons.org/facebook/1877F2",
-      status: "posted",
-      date: "2025-03-09",
-      time: "2:15 PM",
-      caption:
-        "🏠 PRICE REDUCED — $450,000! Beautifully renovated 3-bed ranch in Maple Ridge. New roof, updated HVAC, fully finished basement. Don't miss this one!",
-      image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop",
-      engagement: { views: 1240, likes: 156, comments: 28 },
-    },
-    {
-      id: 3,
-      platform: "LinkedIn",
-      logo: "https://cdn.simpleicons.org/linkedin/0A66C2",
-      status: "scheduled",
-      date: "2025-03-12",
-      time: "9:00 AM",
-      caption:
-        "My team closed 14 deals last quarter — and I didn't write a single social media post manually. Here's the truth about real estate marketing automation...",
-      image: "https://images.unsplash.com/photo-1600573472592-401b489a3cdc?w=400&h=300&fit=crop",
-      engagement: null,
-    },
-    {
-      id: 4,
-      platform: "TikTok",
-      logo: "https://cdn.simpleicons.org/tiktok/000000",
-      status: "draft",
-      date: "2025-03-12",
-      time: "",
-      caption:
-        "POV: You just listed a $1.2M lakefront property and PopFeed made the content in 30 seconds 🎬 #RealTok #LuxuryRealEstate",
-      image: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=400&h=300&fit=crop",
-      engagement: null,
-    },
-  ]);
+  useEffect(() => {
+    supabase
+      .from('posts')
+      .select('*, post_analytics(*)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) console.error('Failed to load posts:', error.message);
+        if (data) {
+          setPosts(data.map(p => {
+            const latestAnalytics = p.post_analytics?.length > 0
+              ? p.post_analytics[p.post_analytics.length - 1]
+              : null;
+            const ts = p.posted_at || p.created_at;
+            const d = new Date(ts);
+            return {
+              id: p.id,
+              platform: p.platform.charAt(0).toUpperCase() + p.platform.slice(1),
+              logo: PLATFORM_LOGOS[p.platform] || "",
+              status: p.status,
+              date: d.toLocaleDateString(),
+              time: p.posted_at ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
+              caption: p.content,
+              engagement: latestAnalytics
+                ? { views: latestAnalytics.views, likes: latestAnalytics.likes }
+                : null,
+            };
+          }));
+        }
+        setLoading(false);
+      });
+  }, [user.id]);
 
   const filteredPosts =
     filter === "all" ? posts : posts.filter((p) => p.status === filter);
@@ -640,48 +680,54 @@ function DashPosts({ user }) {
 
       {/* Posts List */}
       <div className="posts-list">
-        {filteredPosts.map((post) => (
-          <div key={post.id} className="glass-card post-card">
-            <div className="post-image-wrap">
-              <img src={post.image} alt="" className="post-image" />
-            </div>
-            <div className="post-content">
-              <div className="post-meta">
-                <span className="post-platform">
-                  <img src={post.logo} alt={post.platform} className="post-platform-icon" />
-                  {post.platform}
-                </span>
-                <span
-                  className="post-status"
-                  style={{
-                    color: statusColors[post.status],
-                    borderColor: `${statusColors[post.status]}40`,
-                  }}
-                >
-                  {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
-                </span>
-              </div>
-              <p className="post-caption">{post.caption}</p>
-              <div className="post-footer">
-                <span className="post-date">
-                  {post.date} {post.time && `at ${post.time}`}
-                </span>
-                {post.engagement && (
-                  <div className="post-engagement">
-                    <span>👁️ {post.engagement.views}</span>
-                    <span>❤️ {post.engagement.likes}</span>
-                    <span>💬 {post.engagement.comments}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {filteredPosts.length === 0 && (
+        {loading ? (
           <div className="glass-card empty-state">
-            <p>No posts found for this filter.</p>
+            <p style={{ color: "var(--text-dim)" }}>Loading posts...</p>
           </div>
+        ) : filteredPosts.length === 0 ? (
+          <div className="glass-card empty-state">
+            <p style={{ color: "var(--text-dim)" }}>
+              {posts.length === 0
+                ? "No posts yet. Run your automation to generate content."
+                : "No posts match this filter."}
+            </p>
+          </div>
+        ) : (
+          filteredPosts.map((post) => (
+            <div key={post.id} className="glass-card post-card">
+              <div className="post-content">
+                <div className="post-meta">
+                  <span className="post-platform">
+                    {post.logo && (
+                      <img src={post.logo} alt={post.platform} className="post-platform-icon" />
+                    )}
+                    {post.platform}
+                  </span>
+                  <span
+                    className="post-status"
+                    style={{
+                      color: statusColors[post.status],
+                      borderColor: `${statusColors[post.status]}40`,
+                    }}
+                  >
+                    {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
+                  </span>
+                </div>
+                <p className="post-caption">{post.caption}</p>
+                <div className="post-footer">
+                  <span className="post-date">
+                    {post.date} {post.time && `at ${post.time}`}
+                  </span>
+                  {post.engagement && (
+                    <div className="post-engagement">
+                      <span>👁️ {post.engagement.views}</span>
+                      <span>❤️ {post.engagement.likes}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
         )}
       </div>
     </div>
