@@ -535,7 +535,7 @@ function LoginPage({ setPage, setUser }) {
       id: data.user.id,
       subscription: profile?.subscription || 'free',
     });
-    window.location.reload();
+    setPage("home");
   } catch (err) {
     setError("Something went wrong. Please try again.");
     console.error("Login error:", err);
@@ -559,27 +559,29 @@ function LoginPage({ setPage, setUser }) {
         <h2 className="auth-title">Welcome Back</h2>
         <p className="auth-subtitle">Log in to your PopFeed account</p>
         {error && <div className="auth-error">{error}</div>}
-        <div className="input-group">
-          <label className="input-label">Email</label>
-          <input
-            type="email"
-            className="input-field"
-            placeholder="you@example.com"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-        </div>
-        <div className="input-group">
-          <label className="input-label">Password</label>
-          <input
-            type="password"
-            className="input-field"
-            placeholder="••••••••"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
-        </div>
-        <button className="btn-primary btn-full" onClick={handleLogin}>Log In</button>
+        <form onSubmit={handleLogin}>
+          <div className="input-group">
+            <label className="input-label">Email</label>
+            <input
+              type="email"
+              className="input-field"
+              placeholder="you@example.com"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+          </div>
+          <div className="input-group">
+            <label className="input-label">Password</label>
+            <input
+              type="password"
+              className="input-field"
+              placeholder="••••••••"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+          </div>
+          <button type="submit" className="btn-primary btn-full">Log In</button>
+        </form>
         <p className="auth-switch">
           Don't have an account?{" "}
           <button className="link-btn" onClick={() => setPage("signup")}>Sign up</button>
@@ -911,54 +913,45 @@ export default function App() {
   const [user, setUser] = useState(null);
 
  useEffect(() => {
-  const loadProfile = async (sessionUser) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', sessionUser.id)
-      .single();
-    setUser({
-      name: profile?.name || sessionUser.email.split("@")[0],
-      email: sessionUser.email,
-      id: sessionUser.id,
-      subscription: profile?.subscription || 'free',
-    });
-  };
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session?.user) {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+        .then(({ data: profile }) => {
+          setUser({
+            name: profile?.name || session.user.email.split("@")[0],
+            email: session.user.email,
+            id: session.user.id,
+            subscription: profile?.subscription || 'free',
+          });
+        });
+    }
+  });
 
   // Handle post-payment redirect from Stripe (?success=true)
   const params = new URLSearchParams(window.location.search);
   if (params.get('success') === 'true') {
     window.history.replaceState({}, '', '/');
-    // Delay slightly to give the Stripe webhook time to update Supabase
-    setTimeout(async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) await loadProfile(session.user);
+    setTimeout(() => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          supabase.from('profiles').select('*').eq('id', session.user.id).single()
+            .then(({ data: profile }) => {
+              setUser({
+                name: profile?.name || session.user.email.split("@")[0],
+                email: session.user.email,
+                id: session.user.id,
+                subscription: profile?.subscription || 'free',
+              });
+            });
+        }
+      });
     }, 2500);
   }
-
-  // Auth state listener — fires on initial load, sign-in, sign-out, and token refresh
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (event, session) => {
-      if (session?.user) {
-        await loadProfile(session.user);
-        if (event === 'SIGNED_IN') {
-          setPage('home');
-        }
-      } else {
-        setUser(null);
-      }
-    }
-  );
-
-  return () => subscription.unsubscribe();
 }, []);
-
-  // Redirect to home when user logs in while on login/signup page
-  useEffect(() => {
-    if (user && (page === 'login' || page === 'signup')) {
-      setPage('home');
-    }
-  }, [user]);
 
   // Scroll to top when changing pages
   const changePage = (newPage) => {
