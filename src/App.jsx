@@ -908,8 +908,24 @@ function Footer({ setPage }) {
 // ════════════════════════════════════════════
 //  MAIN APP (Puts it all together)
 // ════════════════════════════════════════════
+
+const PAGE_TO_PATH = {
+  home: '/',
+  pricing: '/pricing',
+  examples: '/examples',
+  contact: '/contact',
+  login: '/login',
+  signup: '/signup',
+  account: '/account',
+  dashboard: '/dashboard',
+};
+
+const PATH_TO_PAGE = Object.fromEntries(
+  Object.entries(PAGE_TO_PATH).map(([k, v]) => [v, k])
+);
+
 export default function App() {
-  const [page, setPage] = useState("home");
+  const [page, setPage] = useState(() => PATH_TO_PAGE[window.location.pathname] || 'home');
   const [user, setUser] = useState(null);
 
  useEffect(() => {
@@ -951,10 +967,21 @@ export default function App() {
       });
     }, 2500);
   }
+
+  // Handle browser back/forward buttons
+  const handlePopState = (e) => {
+    const p = e.state?.page || PATH_TO_PAGE[window.location.pathname] || 'home';
+    setPage(p);
+    window.scrollTo(0, 0);
+  };
+  window.addEventListener('popstate', handlePopState);
+  return () => window.removeEventListener('popstate', handlePopState);
 }, []);
 
   // Scroll to top when changing pages
   const changePage = (newPage) => {
+    const path = PAGE_TO_PATH[newPage] || '/';
+    window.history.pushState({ page: newPage }, '', path);
     setPage(newPage);
     window.scrollTo(0, 0);
   };
