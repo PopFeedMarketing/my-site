@@ -378,6 +378,36 @@ background: linear-gradient(135deg, #ff6b9d, #ff4081);
   align-items: center;
 }
 
+/* ─── Interactive liquid glass logo ─── */
+.hero-logo-wrap {
+  --pf-logo-size: clamp(64px, 15vw, 200px);
+  --pf-tag-size: clamp(11px, 2.4vw, 30px);
+  --pf-glass-w: 120px;
+  --pf-glass-h: 76px;
+  margin-bottom: 2.5rem;
+  display: flex;
+  justify-content: center;
+  animation: fadeUp 0.8s ease-out;
+}
+
+@media (max-width: 768px) {
+  .hero-logo-wrap { --pf-glass-w: 64px; --pf-glass-h: 48px; margin-bottom: 1.5rem; }
+}
+
+@media (max-width: 420px) {
+  .hero-logo-wrap {
+    --pf-logo-size: clamp(44px, 13vw, 120px);
+    --pf-glass-w: 40px;
+    --pf-glass-h: 34px;
+  }
+}
+
+@keyframes pf-glass-breathe {
+  0%   { transform: translate(-50%, -50%) scale(1); }
+  50%  { transform: translate(-50%, -50%) scale(1.006); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
 .hero-glass-logo {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);

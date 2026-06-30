@@ -35,6 +35,7 @@ import { useState, useEffect } from "react";
 import Silk from './Silk';
 import ScrollVelocity from './ScrollVelocity';
 import MagnetLines from './MagnetLines';
+import LiquidGlassLogo from './LiquidGlassLogo';
 import { PRICE_IDS } from './stripeConfig';
 import { supabase } from './supabaseClient';
 import Dashboard from './Dashboard';
@@ -228,9 +229,9 @@ function HomePage({ setPage, user }) {
   />
 </div>
         <div className="hero-content">
-  {/* Glass logo card */}
-  <div className="hero-glass-logo">
-    <img src="/big-logo.png" alt="PopFeed" className="hero-logo-img" />
+  {/* Interactive liquid glass logo */}
+  <div className="hero-logo-wrap">
+    <LiquidGlassLogo />
   </div>
   <h1 className="hero-title">{heroTitle}</h1>
           <p className="hero-subtitle">{heroSubtitle}</p>
